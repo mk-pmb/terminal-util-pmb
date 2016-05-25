@@ -39,16 +39,8 @@ function terminal_emu_best () {
   parse_cli_opts "$@" || return $?
   [ -n "${CFG[no-op]}" ] && return 0
 
-  local TERM_CMD=(
-    xfce4-terminal
-    sakura
-    gnome-terminal
-    )
-  if [ -n "${CFG[emus]}" ]; then
-    TERM_CMD=()
-    readarray -t TERM_CMD < <(<<<"${CFG[emus]}" tr -s ':, ' '\n')
-  fi
-  TERM_CMD=( "$(which "${TERM_CMD[@]}" 2>/dev/null | grep -Pe '^/' -m 1)" )
+
+  local TERM_CMD=( "$(guess_best_termemu)" )
   [ -x "${TERM_CMD[0]}" ] || return 4$(
     echo "E: $0: cannot find any supported terminal emulator!" >&2)
 
@@ -63,7 +55,7 @@ function terminal_emu_best () {
   [ -n "$TERM_VER" ] && TERM_VER="$(<<<"$TERM_VER" sed -re '
     s~³0*([0-9]{3})( |$)~\1~g')"
   [ -n "$TERM_VER" ] || TERM_VER=0
-  [ "$DBGLV" -ge 2 ] && echo "D: Terminal: $SHORT_TERM v$TERM_VER" >&2
+  [ "$DBGLV" -ge 2 ] && echo "D: Terminal: $SHORT_TERM v_ser=$TERM_VER" >&2
 
   cfg_ensure_new_window
   cfg_geom
@@ -73,7 +65,7 @@ function terminal_emu_best () {
   cfg_cwd
 
   [ -n "${UNSUP_OPTS[*]}" ] && echo "W: $0: cannot control these aspects of" \
-      "${TERM_CMD[0]##*/} v$TERM_VER: ${UNSUP_OPTS[*]}" >&2
+      "${TERM_CMD[0]##*/} v_ser=$TERM_VER: ${UNSUP_OPTS[*]}" >&2
 
   [ "${CFG[hold]}" == inner ] && INNER_HELPER+=( _hold )
   [ -n "${CFG[exec-alias]}" -o -n "${INNER_HELPER[*]}" ] \
@@ -93,10 +85,31 @@ function terminal_emu_best () {
   INNER_HELPER=()
   [ "${EXEC_APP[0]}" == "$SELFFILE" ] && shorten_self_exec
 
-  [ -n "${CFG[newsid]}" ] && TERM_CMD=( setsid "${TERM_CMD[@]}" )
+  [ -n "${CFG[forkoff]}" ] && TERM_CMD=( forkoff "${TERM_CMD[@]}" )
   [ "$DBGLV" -ge 2 ] && echo "D: term cmd: $(dump_args "${TERM_CMD[@]}"
     ) app: $(dump_args "${EXEC_APP[@]}")" >&2
+
+  case "$SHORT_TERM" in
+    gnome ) exec 2>/dev/null;;    # ignore its GIO-CRITICAL debug warnings
+  esac
   "${TERM_CMD[@]}" "${EXEC_APP[@]}"
+  return $?
+}
+
+
+function guess_best_termemu () {
+  local DEFAULT_TOPLIST=(
+    xfce4-terminal
+    sakura
+    gnome-terminal
+    )
+
+  local EMUS="${CFG[emus]:-+}"
+  EMUS=" $(<<<"$EMUS" tr -s ':, \n' ' ') "
+  EMUS="${EMUS// + / ${DEFAULT_TOPLIST[*]} }"
+  local TOPS=()
+  readarray -t TOPS < <(<<<"${EMUS// /$'\n'}" grep -Pe '\S')
+  which "${TOPS[@]}" 2>/dev/null | grep -Pe '^/' -m 1
   return $?
 }
 
@@ -117,7 +130,7 @@ function parse_cli_opts () {
         CFG[exec-alias]="$1"; shift
         EXEC_APP+=( "$@" ); break;;
       -c | --cmdarg ) EXEC_APP+=( "$OPT" );;
-      --newsid | \
+      --forkoff | \
       --menubar | \
       --hold ) CFG["${OPT#--}"]=+;;
       --emus=* | \
@@ -180,13 +193,17 @@ function cfg_hold () {
 
 function cfg_geom () {
   local GEOM="${CFG[geom]}"
-  [ -n "$GEOM" ] || return 0
 
-  [ "$GEOM" == max ] && case "$SHORT_TERM" in
-    xfce4 | gnome | sakura )
-      TERM_CMD+=( --maximize ); return 0;;
-    * ) TERM_CMD+=( --maximize ); return 2;;
-  esac
+  if [ "${GEOM%%,*}" == max ]; then
+    case "$SHORT_TERM" in
+      xfce4 | gnome | sakura )
+        TERM_CMD+=( --maximize );;
+      * ) TERM_CMD+=( --maximize ); cfg_unsup_opt =max;;
+    esac
+    GEOM="${GEOM#max,}"
+    [ "$GEOM" == max ] && GEOM=
+  fi
+  [ -n "$GEOM" ] || return 0
 
   local NUMS='
     s~^¹x¹$~WxH \1 \2~p
@@ -195,12 +212,12 @@ function cfg_geom () {
   NUMS="${NUMS//¹/([0-9]+)}"
   NUMS="${NUMS//±/([+-][0-9]+)}"
   NUMS=( $(<<<"$GEOM" sed -nre "$NUMS") )
-  case "${NUMS[0]}" in
-    WxH ) case "$SHORT_TERM" in
-      xfce4 ) TERM_CMD+=( --geometry="$GEOM" ); return 0;;
-      gnome ) cfg_geom_gnome "${NUMS[@]:1}"; return $?;;
-      sakura ) TERM_CMD+=( -c "${NUMS[1]}" -r "${NUMS[2]}" ); return 0;;
-      esac;;
+  case "$SHORT_TERM:${NUMS[0]}" in
+    gnome:* ) cfg_geom_gnome "${NUMS[@]:1}"; return $?;;
+    xfce4:WxH )
+      TERM_CMD+=( --geometry="$GEOM" ); return 0;;
+    sakura:WxH )
+      TERM_CMD+=( -c "${NUMS[1]}" -r "${NUMS[2]}" ); return 0;;
   esac
 
   cfg_unsup_opt =
@@ -380,6 +397,12 @@ function shorten_self_exec () {
     return 0
   done
   return 2
+}
+
+
+function forkoff () {
+  setsid "$@" &
+  disown $!
 }
 
 
