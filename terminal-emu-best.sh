@@ -58,6 +58,7 @@ function terminal_emu_best () {
   [ "$DBGLV" -ge 2 ] && echo "D: Terminal: $SHORT_TERM v_ser=$TERM_VER" >&2
 
   cfg_ensure_new_window
+  cfg_icon
   cfg_geom
   cfg_menubar
   cfg_hold
@@ -136,6 +137,7 @@ function parse_cli_opts () {
       --emus=* | \
       --cwd=* | \
       --geom=* | \
+      --icon=* | \
       --title=* )
         OPT="${OPT#--}"
         CFG["${OPT%%=*}"]="${OPT#*=}";;
@@ -188,6 +190,19 @@ function cfg_hold () {
     gnome:+ ) CFG[hold]=inner;;
     * ) cfg_unsup_opt;;
   esac
+}
+
+
+function cfg_icon () {
+  local ICON="${CFG[icon]}"
+
+  case "$SHORT_TERM" in
+    xfce4 )
+      TERM_CMD+=( --icon="$ICON" ); return 0;;
+  esac
+
+  cfg_unsup_opt =
+  return 0
 }
 
 
@@ -331,7 +346,12 @@ function inner_helper__exec () {
   fi
   [ -n "${OPTS[*]}" ] || OPTS=( "$SHELL" -i )
   exec $ALIAS_OPT "${OPTS[@]}"
-  return $?
+  local EXEC_RV=$?
+  echo -n "E: exec failed: rv=$EXEC_RV for"
+  printf ' ‹%s›' exec $ALIAS_OPT "${OPTS[@]}"; echo
+  echo 'press any key to close exit'
+  read -rs -N 1 ALIAS_OPT
+  return "$EXEC_RV"
 }
 
 
@@ -368,7 +388,7 @@ function check_wrap_app_args () {
   else
     # check for prefixes that could confuse the terminal emulator:
     for ARG in "${EXEC_APP[@]}"; do case "$ARG" in
-      [a-z0-9_/]* ) ;;
+      [a-z0-9/]* ) ;;
       * ) PAD="$ARG_WRAP_PRFX"; break;;
     esac; done
   fi
@@ -378,7 +398,8 @@ function check_wrap_app_args () {
   for ARG in "${ORIG_ARGS[@]}"; do EXEC_APP+=( "$PAD$ARG" ); done
   ORIG_ARGS=( "${INNER_HELPER[@]}" )
   INNER_HELPER=( _strip )
-  [ -n "${ORIG_ARGS[*]}" ] || ORIG_ARGS+=( _exec )
+  local OPT_EXEC_NO_ALIAS=
+  [ -n "${ORIG_ARGS[*]}" ] || ORIG_ARGS+=( _exec "$OPT_EXEC_NO_ALIAS" )
   for ARG in "${ORIG_ARGS[@]}"; do INNER_HELPER+=( "$PAD$ARG" ); done
   return 0
 }
