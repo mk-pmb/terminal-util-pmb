@@ -44,8 +44,7 @@ function terminal_emu_best () {
   [ -x "${TERM_CMD[0]}" ] || return 4$(
     echo "E: $0: cannot find any supported terminal emulator!" >&2)
 
-  local SHORT_TERM="$(basename "${TERM_CMD[0]}")"
-  SHORT_TERM="${SHORT_TERM%-terminal}"
+  local SHORT_TERM="$(shorten_termprog_name "${TERM_CMD[0]}")"
   local TERM_VER=
   case "$SHORT_TERM" in
     gnome )
@@ -58,6 +57,11 @@ function terminal_emu_best () {
   [ "$DBGLV" -ge 2 ] && echo "D: Terminal: $SHORT_TERM v_ser=$TERM_VER" >&2
 
   cfg_ensure_new_window
+  cfg_window_name; cfg_window_class
+    # ^-- wmctrl displays them as name.class, e.g.
+    # Navigator.Firefox
+    # IEXPLORE.EXE.Wine
+    # see https://tronche.com/gui/x/icccm/sec-4.html#WM_CLASS
   cfg_icon
   cfg_geom
   cfg_menubar
@@ -98,6 +102,14 @@ function terminal_emu_best () {
 }
 
 
+function shorten_termprog_name () {
+  local TP="$1"
+  TP="${TP##*/}"
+  TP="${TP%-terminal}"
+  echo "$TP"
+}
+
+
 function guess_best_termemu () {
   local DEFAULT_TOPLIST=(
     xfce4-terminal
@@ -134,12 +146,15 @@ function parse_cli_opts () {
       --forkoff | \
       --menubar | \
       --hold ) CFG["${OPT#--}"]=+;;
-      --emus=* | \
       --cwd=* | \
+      --emus=* | \
       --geom=* | \
       --icon=* | \
+      --winclass=* | \
+      --winname=* | \
       --title=* )
         OPT="${OPT#--}"
+        [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: [${OPT%%=*}]=${OPT#*=}" >&2
         CFG["${OPT%%=*}"]="${OPT#*=}";;
       --help | \
       -* )
@@ -259,9 +274,10 @@ function cfg_ensure_new_window () {
       if [ "$TERM_VER" -lt 3008 ]; then
         TERM_CMD+=( --disable-factory )
       else
-        # https://mail.gnome.org/archives/commits-list/2013-
-        # September/msg05584.html
         cfg_unsup_opt -gnome
+        # "There's no bug here; this option is simply not supported anymore."
+        # https://bugzilla.gnome.org/show_bug.cgi?id=707899#c1
+        INNER_HELPER+=( _unreliable_parent )
       fi;;
     sakura ) ;;
     * ) cfg_unsup_opt;;
@@ -271,6 +287,7 @@ function cfg_ensure_new_window () {
 
 function cfg_menubar () {
   local MBAR="${CFG[menubar]:--}"
+  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$MBAR'" >&2
   case "$SHORT_TERM:${MBAR:0:1}" in
     xfce4:- | gnome:- ) TERM_CMD+=( --hide-menubar );;
     xfce4:+ | gnome:+ ) TERM_CMD+=( --show-menubar );;
@@ -281,16 +298,97 @@ function cfg_menubar () {
 }
 
 
+function cfg_window_class () {
+  local WINCLS="${CFG[winclass]}"
+  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$WINCLS'" >&2
+  [ -z "$WINCLS" ] && return 0
+  case "$SHORT_TERM" in
+    gnome )
+      # --class is deprecated: GNOME Bug #775383, WONTFIX
+      INNER_HELPER+=( _xdo_setwin class="$WINCLS" );;
+    sakura )  TERM_CMD+=( --class="$WINCLS" );;
+    * ) cfg_unsup_opt;;
+  esac
+}
+
+
+function cfg_window_name () {
+  local WINNAME="${CFG[winname]}"
+  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$WINNAME'" >&2
+  [ -z "$WINNAME" ] && return 0
+  case "$SHORT_TERM" in
+    gnome )
+      # --name is deprecated: GNOME Bug #775383, WONTFIX
+      INNER_HELPER+=( _xdo_setwin classname="$WINNAME" );;
+    sakura )  TERM_CMD+=( --name="$WINNAME" );;
+    * ) cfg_unsup_opt;;
+  esac
+}
+
+
+function array_shift () {
+  local A="$1"; shift     # name of source array
+  local V=    # name of each target variable
+  local I=0
+  for V in "$@"; do
+    [ "$V" == - ] || eval "$V"'="${'"$A[$I]"'}"'
+    # echo D: eval "$V"'="${'"$A[$I]"'}"' >&2
+    let I="$I+1"
+  done
+  eval "$A"'=( "${'"$A"'[@]:'"$#"'}" )'
+}
+
+
 function inner_helper () {
   [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME args: $(dump_args "$@")" >&2
+  local -A IH_CFG
+  local IH_TRACE=()
   local OPTS=( "$@" )
+  inner_helper_dare && return 0
+  local DARE_RV=$?
+  ( echo -n "E: inner helper failed: "
+    printf '%s » ' "${IH_TRACE[@]}"
+    echo -n "rv=$DARE_RV, remaining opts: "
+    dump_args "${OPTS[@]}"
+    echo 'press any key to close/exit'
+  ) >&2
+  local KEY=
+  read -rs -N 1 KEY
+  return $DARE_RV
+}
+
+
+function inner_helper_dare () {
+  # local TERM_PROG="$(LANG=C ps wwch -o cmd "$PPID")"
+  # TERM_PROG="${TERM_PROG%-}"
+  # local SHORT_TERM="$(shorten_termprog_name "$TERM_PROG")"
+  # [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: terminal progam:" \
+  #   "'$SHORT_TERM' ('$TERM_PROG')" >&2
+
+  local XDO_SETWIN=(
+    # name=N:       WM_NAME = title, usually
+    # icon-name=N:  WM_ICON_NAME = title when minimized, usually
+    # role=N, classname=N, class=N
+    )
+  local RV=
   local OPT=
   while [ "${#OPTS[@]}" -gt 0 ]; do
-    OPT="${OPTS[0]}"; OPTS=( "${OPTS[@]:1}" )
+    array_shift OPTS OPT
+    [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$OPT' <${OPTS[*]}>" >&2
     case "$OPT" in
-      _strip | _title | _exec | _hold )
+      _unreliable_parent )
+        IH_CFG["${OPT#_}"]=+;;
+      _xdo_setwin )
+        array_shift OPTS OPT
+        XDO_SETWIN+=( "$OPT" );;
+      _title | _strip )
         inner_helper_"$OPT" || return $?;;
-      * ) echo "E: $FUNCNAME: unsupported option: $OPT" >&2; return 4;;
+      _hold | _exec )
+        [ "${#XDO_SETWIN[@]}" == 0 ] || inner_helper_xdo_setwin || return $?
+        inner_helper_"$OPT" || return $?;;
+      * )
+        IH_TRACE+=( "$FUNCNAME: unsupported option" "$OPT" )
+        return 4;;
     esac
   done
   echo "E: $0 [$$], $FUNCNAME: unexpected end of commands, gonna sleep." >&2
@@ -309,31 +407,87 @@ function inner_helper__strip () {
 }
 
 
-function inner_helper__title () {
-  local TERM_TITLE="${OPTS[0]}"; OPTS=( "${OPTS[@]:1}" )
-  printf '\x1b]0;%s\x07' "$TERM_TITLE"
-  # ^-- If this seems to fail, it's usually because the title is (re)set
-  #     very soon after we set it.
+function inner_helper_guess_winid () {
+  local PFX_W="W: $FUNCNAME: "
+  local WIN_ID=
+  [ "$DBGLV" -ge 2 ] && echo "${PFX_W}(@$0) guessing by ppid $PPID" >&2
+  if [ -n "${IH_CFG[unreliable_parent]}" ]; then
+    [ "$DBGLV" -ge 2 ] && echo "${PFX_W}skip: unreliable parent" >&2
+  else
+    WIN_ID="$(xdotool search --all --onlyvisible --pid "$PPID" --class .)"
+    inner_helper_validate_winid && return 0
+  fi
 
-  # Since some terminal emulators tend to add their own title to the one
-  # set with above method, make assurance double sure:
-  local WIN_IDS=( $(wmctrl -pl 2>/dev/null | LANG=C sed -nre '
-    s~^(0x[0-9a-fA-F]+)\s+\S+\s+'"$PPID"'\s.*$~\1~p') )
-  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: ppid=$PPID win_ids=[$(
-    dump_args "${WIN_IDS[@]}")]" >&2
-  [ -n "${WIN_IDS[*]}" ] && set_wintitle_by_hnd_soon "${WIN_IDS[@]}"
+  echo "${PFX_W}falling back to title guessing work-around" >&2
+  local TITLE_TAG="==:$$:$UID:$RANDOM:== $(LANG=C ps wwch -o cmd "$PPID")"
+  # LANG=C ps wwch -o cmd,pid,uid "$PPID" | tr -s ' \t' :
+  set_xterm_title "$TITLE_TAG"
+  WIN_ID="$(timeout 2s xdotool search --sync --all --onlyvisible \
+    --name "$TITLE_TAG")"
+  inner_helper_validate_winid && return 0
+
+  return 2
+}
+
+
+function inner_helper_validate_winid () {
+  case "$WIN_ID" in
+    *$'\n'* )
+      [ "$DBGLV" -ge 2 ] && echo "${PFX_W}too many window IDs" >&2;;
+    '' )
+      [ "$DBGLV" -ge 2 ] && echo "${PFX_W}no window ID" >&2;;
+    0x[0-9a-fA-F]* ) echo "$WIN_ID"; return 0;;
+    [0-9]* ) printf '0x%x\n' "$WIN_ID"; return 0;;
+    * )
+      echo "${PFX_W}strange window ID '$WIN_ID' for process $PPID" >&2;;
+  esac
+  return 2
+}
+
+
+function inner_helper_xdo_setwin () {
+  local WIN_ID="$(inner_helper_guess_winid)"
+  [ -n "$WIN_ID" ] || return 5$(
+    echo "E: unable to identify terminal window" >&2)
+
+  local XDO_CMD=( xdotool set_window )
+  local ARG=
+  for ARG in "${XDO_SETWIN[@]}"; do
+    XDO_CMD+=( "--${ARG%%=*}" "${ARG#*=}" )
+  done
+  XDO_CMD+=( "$WIN_ID" )
+  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: $(dump_args "${XDO_CMD[@]}")" >&2
+  "${XDO_CMD[@]}"
+  ARG="$?"
+  if [ "$ARG" != 0 ]; then
+    IH_TRACE=( "$FUNCNAME" "${XDO_CMD[@]}" )
+    return "$ARG"
+  fi
+
+  ( sleep 0.2s; "${XDO_CMD[@]}" ) &
+  disown $!
   return 0
 }
 
 
-function set_wintitle_by_hnd_soon () {
-  ( sleep 0.1s
-    local WIN_ID=
-    for WIN_ID in "$@"; do
-      wmctrl -iFr "$WIN_ID" -T "$TERM_TITLE"
-    done
-  ) &
-  disown $!
+function set_xterm_title () {
+  if ! tty --silent; then
+    echo "E: $FUNCNAME: expected stdin to be a TTY" >&2
+    return 3
+  fi
+
+  printf '\x1b]0;%s\x07' "$*" >&0
+  # ^-- If this seems to fail, it's usually because the title is (re)set
+  #     very soon after we set it.
+}
+
+
+function inner_helper__title () {
+  local TERM_TITLE=
+  array_shift OPTS TERM_TITLE
+  set_xterm_title "$TERM_TITLE"
+  XDO_SETWIN+=( {,icon-}name="$TERM_TITLE" )
+  return 0
 }
 
 
@@ -342,16 +496,12 @@ function inner_helper__exec () {
   if [ -n "${OPTS[0]}" ]; then
     ALIAS_OPT='-a'
   else
-    OPTS=( "${OPTS[@]:1}" )
+    array_shift OPTS -
   fi
   [ -n "${OPTS[*]}" ] || OPTS=( "$SHELL" -i )
+  IH_TRACE+=( "_exec[alias=$ALIAS_OPT]" )
   exec $ALIAS_OPT "${OPTS[@]}"
-  local EXEC_RV=$?
-  echo -n "E: exec failed: rv=$EXEC_RV for"
-  printf ' ‹%s›' exec $ALIAS_OPT "${OPTS[@]}"; echo
-  echo 'press any key to close exit'
-  read -rs -N 1 ALIAS_OPT
-  return "$EXEC_RV"
+  return $?
 }
 
 
