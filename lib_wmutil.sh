@@ -29,8 +29,13 @@ function inner_helper_guess_winid () {
   local TITLE_TAG="==:$$:$UID:$RANDOM:== $(LANG=C ps wwch -o cmd "$PPID")"
   # LANG=C ps wwch -o cmd,pid,uid "$PPID" | tr -s ' \t' :
   set_xterm_title "$TITLE_TAG"
-  WIN_ID="$(find_window_id_by_title "$TITLE_TAG")"
-  inner_helper_validate_winid "$WIN_ID" && return 0
+  SECONDS=0
+  while [ "$SECONDS" -le 2 ]; do
+    sleep 0.2s
+    # some window managers seem to need a moment to catch up
+    WIN_ID="$(find_window_id_by_title "$TITLE_TAG")"
+    inner_helper_validate_winid "$WIN_ID" && return 0
+  done
 
   echo "${PFX_W}exhausted all known strategies. giving up." >&2
   return 2
