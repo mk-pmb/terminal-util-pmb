@@ -415,31 +415,53 @@ function inner_helper_guess_winid () {
     [ "$DBGLV" -ge 2 ] && echo "${PFX_W}skip: unreliable parent" >&2
   else
     WIN_ID="$(xdotool search --all --onlyvisible --pid "$PPID" --class .)"
-    inner_helper_validate_winid && return 0
+    inner_helper_validate_winid "$WIN_ID" && return 0
   fi
 
   echo "${PFX_W}falling back to title guessing work-around" >&2
   local TITLE_TAG="==:$$:$UID:$RANDOM:== $(LANG=C ps wwch -o cmd "$PPID")"
   # LANG=C ps wwch -o cmd,pid,uid "$PPID" | tr -s ' \t' :
   set_xterm_title "$TITLE_TAG"
-  WIN_ID="$(timeout 2s xdotool search --sync --all --onlyvisible \
-    --name "$TITLE_TAG")"
-  inner_helper_validate_winid && return 0
+  WIN_ID="$(find_window_id_by_title "$TITLE_TAG")"
+  inner_helper_validate_winid "$WIN_ID" && return 0
 
+  echo "${PFX_W}exhausted all known strategies. giving up." >&2
+  return 2
+}
+
+
+function find_window_id_by_title () {
+  local W_TITLE="$1"
+  local W_ID=
+
+  if xdotool version &>/dev/null; then
+    W_ID="$(timeout 2s xdotool search --sync --all --onlyvisible
+      --name "$W_TITLE")"
+    [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
+  fi
+
+  W_ID="$(xlsclients-tabs 2>/dev/null \
+    | grep -Fe $'\t'"name:$W_TITLE"$'\t' \
+    | grep -oPe '^win:0x\S+' | cut -d : -sf 2)"
+  [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
+
+  echo "W: $FUNCNAME: exhausted all known strategies. giving up." \
+    "maybe there just is no window named '$W_TITLE'." >&2
   return 2
 }
 
 
 function inner_helper_validate_winid () {
-  case "$WIN_ID" in
+  local W_ID="$1"
+  case "$W_ID" in
     *$'\n'* )
       [ "$DBGLV" -ge 2 ] && echo "${PFX_W}too many window IDs" >&2;;
     '' )
       [ "$DBGLV" -ge 2 ] && echo "${PFX_W}no window ID" >&2;;
-    0x[0-9a-fA-F]* ) echo "$WIN_ID"; return 0;;
-    [0-9]* ) printf '0x%x\n' "$WIN_ID"; return 0;;
+    0x[0-9a-fA-F]* ) echo "$W_ID"; return 0;;
+    [0-9]* ) printf '0x%x\n' "$W_ID"; return 0;;
     * )
-      echo "${PFX_W}strange window ID '$WIN_ID' for process $PPID" >&2;;
+      echo "${PFX_W}strange window ID '$W_ID' for process $PPID" >&2;;
   esac
   return 2
 }
@@ -448,7 +470,8 @@ function inner_helper_validate_winid () {
 function inner_helper_xdo_setwin () {
   local WIN_ID="$(inner_helper_guess_winid)"
   [ -n "$WIN_ID" ] || return 5$(
-    echo "E: unable to identify terminal window" >&2)
+    echo "E: unable to identify terminal window," \
+      "thus cannot set these window properties: ${XDO_SETWIN[*]}" >&2)
 
   local XDO_CMD=( xdotool set_window )
   local ARG=
