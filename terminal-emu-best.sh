@@ -34,13 +34,15 @@ function terminal_emu_best () {
     return $?
   fi
 
-  local -A CFG
+  local -A CFG=()
   local EXEC_APP=()
   local UNSUP_OPTS=()
   local INNER_HELPER=()
   parse_cli_opts "$@" || return $?
   [ -n "${CFG[no-op]}" ] && return 0
 
+  # early inheritable options
+  [ -n "${CFG[accept]}" ] && INNER_HELPER+=( _accept "${CFG[accept]}" )
 
   local TERM_CMD=( "$(guess_best_termemu)" )
   [ -x "${TERM_CMD[0]}" ] || return 4$(
@@ -89,7 +91,7 @@ function terminal_emu_best () {
 
   [ -n "${INNER_HELPER[*]}" ] && EXEC_APP=(
     "$SELFFILE" "${ARG_WRAP_PRFX}WRAP" "${INNER_HELPER[@]}" "${EXEC_APP[@]}" )
-  INNER_HELPER=()
+  INNER_HELPER=()   # no longer required after merge into EXEC_APP
   [ "${EXEC_APP[0]}" == "$SELFFILE" ] && shorten_self_exec
 
   [ -n "${CFG[forkoff]}" ] && TERM_CMD=( forkoff "${TERM_CMD[@]}" )
@@ -158,6 +160,10 @@ function parse_cli_opts () {
         OPT="${OPT#--}"
         [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: [${OPT%%=*}]=${OPT#*=}" >&2
         CFG["${OPT%%=*}"]="${OPT#*=}";;
+      --accept=* )
+        OPT="${OPT#--}"
+        [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: [${OPT%%=*}]+=${OPT#*=}," >&2
+        CFG["${OPT%%=*}"]+="${OPT#*=},";;
       --help | \
       -* )
         local -fp "${FUNCNAME[0]}" | guess_bash_script_config_opts-pmb
@@ -307,7 +313,7 @@ function cfg_window_class () {
   case "$SHORT_TERM" in
     gnome )
       # --class is deprecated: GNOME Bug #775383, WONTFIX
-      INNER_HELPER+=( _xdo_setwin class="$WINCLS" );;
+      INNER_HELPER+=( _set_winprop class="$WINCLS" );;
     sakura )  TERM_CMD+=( --class="$WINCLS" );;
     * ) cfg_unsup_opt;;
   esac
@@ -321,7 +327,7 @@ function cfg_window_name () {
   case "$SHORT_TERM" in
     gnome )
       # --name is deprecated: GNOME Bug #775383, WONTFIX
-      INNER_HELPER+=( _xdo_setwin classname="$WINNAME" );;
+      INNER_HELPER+=( _set_winprop classname="$WINNAME" );;
     sakura )  TERM_CMD+=( --name="$WINNAME" );;
     * ) cfg_unsup_opt;;
   esac
@@ -343,7 +349,7 @@ function array_shift () {
 
 function inner_helper () {
   [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME args: $(dump_args "$@")" >&2
-  local -A IH_CFG
+  local -A IH_CFG=
   local IH_TRACE=()
   local OPTS=( "$@" )
   inner_helper_dare && return 0
@@ -367,26 +373,31 @@ function inner_helper_dare () {
   # [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: terminal progam:" \
   #   "'$SHORT_TERM' ('$TERM_PROG')" >&2
 
-  local XDO_SETWIN=(
+  local SET_WINPROPS=(
     # name=N:       WM_NAME = title, usually
     # icon-name=N:  WM_ICON_NAME = title when minimized, usually
     # role=N, classname=N, class=N
     )
   local RV=
   local OPT=
+  local ARG=
   while [ "${#OPTS[@]}" -gt 0 ]; do
     array_shift OPTS OPT
     [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$OPT' <${OPTS[*]}>" >&2
     case "$OPT" in
+      _accept )
+        array_shift OPTS ARG
+        IH_CFG["${OPT#_}"]="$ARG";;
       _unreliable_parent )
         IH_CFG["${OPT#_}"]=+;;
-      _xdo_setwin )
+      _set_winprop )
         array_shift OPTS OPT
-        XDO_SETWIN+=( "$OPT" );;
+        SET_WINPROPS+=( "$OPT" );;
       _title | _strip )
         inner_helper_"$OPT" || return $?;;
       _hold | _exec )
-        [ "${#XDO_SETWIN[@]}" == 0 ] || inner_helper_xdo_setwin || return $?
+        [ "${#SET_WINPROPS[@]}" == 0 ] || \
+          inner_helper_set_winprops || return $?
         inner_helper_"$OPT" || return $?;;
       * )
         IH_TRACE+=( "$FUNCNAME: unsupported option" "$OPT" )
@@ -409,29 +420,64 @@ function inner_helper__strip () {
 }
 
 
-function inner_helper_xdo_setwin () {
-  local WIN_ID="$(inner_helper_guess_winid)"
-  [ -n "$WIN_ID" ] || return 5$(
-    echo "E: unable to identify terminal window," \
-      "thus cannot set these window properties: ${XDO_SETWIN[*]}" >&2)
+function inner_helper_set_winprops () {
+  inner_helper_set_winprops__try
+  local RV=$?
+  [ "$RV" == 0 ] && return 0
+  echo "E: cannot set these window properties: ${SET_WINPROPS[*]}" >&2
+  return "$RV"
+}
 
-  local XDO_CMD=( xdotool set_window )
-  local ARG=
-  for ARG in "${XDO_SETWIN[@]}"; do
-    XDO_CMD+=( "--${ARG%%=*}" "${ARG#*=}" )
+
+function inner_helper_set_winprops__try () {
+  local WIN_ID="$(inner_helper_guess_winid)"
+  [ -n "$WIN_ID" ] || return 5$(echo "E: cannot identify terminal window" >&2)
+
+  local XDO_SET=()
+  local XDO_NEED=
+  local PROP=
+  local VAL=
+  for PROP in "${SET_WINPROPS[@]}"; do
+    VAL="${PROP#*=}"
+    PROP="${PROP%%=*}"
+    case "$PROP" in
+      title )
+        again_soon set_xwindow_title "$WIN_ID" "$VAL" || return $?;;
+      * )
+        case ",${IH_CFG[accept]}" in
+          *",bad-$PROP,"* ) ;;
+          * ) XDO_NEED+="$PROP=";;
+        esac
+        XDO_SET+=( --"$PROP" "$VAL" );;
+    esac
   done
-  XDO_CMD+=( "$WIN_ID" )
-  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: $(dump_args "${XDO_CMD[@]}")" >&2
-  "${XDO_CMD[@]}"
-  ARG="$?"
-  if [ "$ARG" != 0 ]; then
+
+  if [ "${#XDO_SET[@]}" != 0 ]; then
+    if ! xdotool xversion &>/dev/null; then
+      [ -z "$XDO_NEED" ] && return 0
+      XDO_NEED="${XDO_NEED%=}"
+      echo "E: cannot set these window properties without xdotool:" \
+        "${XDO_NEED//=/, }." \
+        "to ignore, use --accept=bad-${XDO_NEED//=/,bad-}" >&2
+      return 4
+    fi
+
+    XDO_SET=( xdotool set_window "$WIN_ID" "${XDO_SET[@]}" )
+    [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: $(dump_args "${XDO_CMD[@]}")" >&2
+    again_soon "${XDO_CMD[@]}" && return 0
     IH_TRACE=( "$FUNCNAME" "${XDO_CMD[@]}" )
-    return "$ARG"
+    return 7
   fi
 
-  ( sleep 0.2s; "${XDO_CMD[@]}" ) &
-  disown $!
   return 0
+}
+
+
+function again_soon () {
+  ( sleep 0.2s; exec </dev/null &>/dev/null; "$@" ) &
+  disown $!
+  "$@"
+  return $?
 }
 
 
@@ -439,7 +485,7 @@ function inner_helper__title () {
   local TERM_TITLE=
   array_shift OPTS TERM_TITLE
   set_xterm_title "$TERM_TITLE"
-  XDO_SETWIN+=( {,icon-}name="$TERM_TITLE" )
+  SET_WINPROPS+=( title="$TERM_TITLE" )
   return 0
 }
 

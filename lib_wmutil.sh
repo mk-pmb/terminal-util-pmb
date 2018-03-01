@@ -2,6 +2,17 @@
 # -*- coding: utf-8, tab-width: 2 -*-
 
 
+function set_xwindow_title () {
+  local W_ID="$1"; shift
+  local W_TITLE="$1"; shift
+  local PROP=
+  for PROP in {,_NET_}WM_{ICON_,}NAME; do
+    xprop -id "$W_ID" -f "$PROP" 8u -set "$PROP" "$W_TITLE" || return $?
+  done
+  return 0
+}
+
+
 function set_xterm_title () {
   if ! tty --silent; then
     echo "E: $FUNCNAME: expected stdin to be a TTY" >&2
