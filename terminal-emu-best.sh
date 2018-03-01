@@ -434,16 +434,16 @@ function find_window_id_by_title () {
   local W_TITLE="$1"
   local W_ID=
 
+  W_ID="$(xwininfo -name "$W_TITLE" \
+    | grep -oPe '^xwininfo: Window id: 0x\S+' -m 1)"
+  W_ID="${W_ID##* }"
+  [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
+
   if xdotool version &>/dev/null; then
     W_ID="$(timeout 2s xdotool search --sync --all --onlyvisible
       --name "$W_TITLE")"
     [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
   fi
-
-  W_ID="$(xlsclients-tabs 2>/dev/null \
-    | grep -Fe $'\t'"name:$W_TITLE"$'\t' \
-    | grep -oPe '^win:0x\S+' | cut -d : -sf 2)"
-  [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
 
   echo "W: $FUNCNAME: exhausted all known strategies. giving up." \
     "maybe there just is no window named '$W_TITLE'." >&2
