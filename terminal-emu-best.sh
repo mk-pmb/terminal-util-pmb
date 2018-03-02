@@ -462,10 +462,10 @@ function inner_helper_set_winprops__try () {
       return 4
     fi
 
-    XDO_SET=( xdotool set_window "$WIN_ID" "${XDO_SET[@]}" )
-    [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: $(dump_args "${XDO_CMD[@]}")" >&2
-    again_soon "${XDO_CMD[@]}" && return 0
-    IH_TRACE=( "$FUNCNAME" "${XDO_CMD[@]}" )
+    XDO_SET=( xdotool set_window "${XDO_SET[@]}" "$WIN_ID" )
+    [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: $(dump_args "${XDO_SET[@]}")" >&2
+    again_soon "${XDO_SET[@]}" && return 0
+    IH_TRACE=( "$FUNCNAME" "${XDO_SET[@]}" )
     return 7
   fi
 
