@@ -453,7 +453,7 @@ function inner_helper_set_winprops__try () {
   done
 
   if [ "${#XDO_SET[@]}" != 0 ]; then
-    if ! xdotool xversion &>/dev/null; then
+    if ! xdotool version &>/dev/null; then
       [ -z "$XDO_NEED" ] && return 0
       XDO_NEED="${XDO_NEED%=}"
       echo "E: cannot set these window properties without xdotool:" \
