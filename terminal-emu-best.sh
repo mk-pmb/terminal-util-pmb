@@ -311,6 +311,7 @@ function cfg_window_class () {
   [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$WINCLS'" >&2
   [ -z "$WINCLS" ] && return 0
   case "$SHORT_TERM" in
+    xfce4 | \
     gnome )
       # --class is deprecated: GNOME Bug #775383, WONTFIX
       INNER_HELPER+=( _set_winprop class="$WINCLS" );;
@@ -325,6 +326,7 @@ function cfg_window_name () {
   [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$WINNAME'" >&2
   [ -z "$WINNAME" ] && return 0
   case "$SHORT_TERM" in
+    xfce4 | \
     gnome )
       # --name is deprecated: GNOME Bug #775383, WONTFIX
       INNER_HELPER+=( _set_winprop classname="$WINNAME" );;
