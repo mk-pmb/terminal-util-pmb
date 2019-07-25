@@ -1,0 +1,21 @@
+{ "name": "terminal-util-pmb",
+  "version": "0.1.2",
+  "description": "Utilities for using shells and terminal emulators in GNU+Linux, especially Ubuntu.",
+  "keywords": [],
+
+  "author": "M.K. (https://github.com/mk-pmb)",
+  "homepage": "https://github.com/mk-pmb/terminal-util-pmb/#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mk-pmb/terminal-util-pmb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mk-pmb/terminal-util-pmb/issues"
+  },
+  "contributors": [],
+
+  "private": true, "license": "GPL-3.0",
+
+
+  "npm vs. BOM = Unexpected token": "-*- coding: UTF-8 -*-"
+}

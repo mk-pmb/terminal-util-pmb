@@ -1,12 +1,30 @@
 ﻿
+<!--#echo json="package.json" key="name" underline="=" -->
 terminal-util-pmb
 =================
-Utilities for using shells and terminal emulators in GNU+Linux,
-especially Ubuntu.
+<!--/#echo -->
 
+<!--#echo json="package.json" key="description" -->
+Utilities for using shells and terminal emulators in GNU+Linux, especially
+Ubuntu.
+<!--/#echo -->
+
+
+
+
+Known issues
+------------
+
+* Needs more/better tests and docs.
+
+
+
+
+&nbsp;
 
 
 License
 -------
-Unless otherwise noted, software in this repo is
-distributed under the terms of the GPL v3.
+<!--#echo json="package.json" key=".license" -->
+GPL-3.0
+<!--/#echo -->
