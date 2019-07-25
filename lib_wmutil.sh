@@ -32,24 +32,43 @@ function inner_helper_guess_winid () {
   if [ -n "${IH_CFG[unreliable_parent]}" ]; then
     [ "$DBGLV" -ge 2 ] && echo "${PFX_W}skip: unreliable parent" >&2
   else
-    WIN_ID="$(xdotool search --all --onlyvisible --pid "$PPID" --class .)"
-    inner_helper_validate_winid "$WIN_ID" && return 0
+    find_window_id_eagerly WIN_ID by_pid "$PPID" && return 0
   fi
 
   echo "${PFX_W}falling back to title guessing work-around" >&2
   local TITLE_TAG="==:$$:$UID:$RANDOM:== $(LANG=C ps wwch -o cmd "$PPID")"
   # LANG=C ps wwch -o cmd,pid,uid "$PPID" | tr -s ' \t' :
   set_xterm_title "$TITLE_TAG"
-  SECONDS=0
-  while [ "$SECONDS" -le 2 ]; do
-    sleep 0.2s
-    # some window managers seem to need a moment to catch up
-    WIN_ID="$(find_window_id_by_title "$TITLE_TAG")"
-    inner_helper_validate_winid "$WIN_ID" && return 0
-  done
+  find_window_id_eagerly WIN_ID by_title "$TITLE_TAG" && return 0
 
   echo "${PFX_W}exhausted all known strategies. giving up." >&2
+  head -n 1
+  autoscreen --sessname ih$$
   return 2
+}
+
+
+function find_window_id_eagerly () {
+  local DEST_VAR="$1"; shift
+  [ "$DEST_VAR" == W_ID ] || local W_ID=
+  W_ID=
+  SECONDS=0
+  while [ "$SECONDS" -le 3 ]; do
+    sleep 0.2s
+    # some window managers seem to need a moment to catch up
+    W_ID="$("${FUNCNAME%_*}_$@")"
+    if inner_helper_validate_winid "$W_ID"; then
+      eval "$DEST_VAR"'="$W_ID"'
+      return 0
+    fi
+  done
+  echo "E: Unable to find our window using method $*" >&2
+  return 4
+}
+
+
+function find_window_id_by_pid () {
+  xdotool search --all --onlyvisible --pid "$1" --class .
 }
 
 
@@ -63,7 +82,7 @@ function find_window_id_by_title () {
   [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
 
   if xdotool version &>/dev/null; then
-    W_ID="$(timeout 2s xdotool search --sync --all --onlyvisible
+    W_ID="$(timeout 2s xdotool search --sync --all --onlyvisible \
       --name "$W_TITLE")"
     [ -n "$W_ID" ] && inner_helper_validate_winid "$W_ID" && return 0
   fi
