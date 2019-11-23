@@ -5,6 +5,10 @@
 function screen_windowlist () {
   local SESSNAME="$1"; shift
   local DBGLV="${DEBUGLEVEL:-0}"
+  case "$SESSNAME" in
+    --func:* ) "${SESSNAME#*:}" "$@"; return $?;;
+    --parse-dump ) parse_screen_list_dump "$@"; return $?;;
+  esac
 
   local PTY_ROWS=16005
   # You need a few (about five) more lines of pty height than
@@ -67,7 +71,8 @@ function screen_windowlist () {
     )
   local SCAN_DATA="$(LANG=C "${SOCAT_CMD[@]}" 2> >(
     LANG=C sed -urf <(sedcmd_socat_errors) >&2
-    ) | LANG=C sed -urf <(sedcmd_scan))"
+    ) | tee -- "${SCREEN_WINLIST_DUMP_RAW:-/dev/null}" \
+    | parse_screen_list_dump)"
   SCAN_DURA+=" + $(date +%s%N)"
   let SCAN_DURA="( $SCAN_DURA ) / 1"000'000'
 
@@ -92,6 +97,8 @@ function screen_windowlist () {
   return 4
 }
 
+
+function parse_screen_list_dump () { LANG=C sed -urf <(sedcmd_scan) -- "$@"; }
 
 function ushort_hex_le () {
   local NUM="${1:-0}"
