@@ -151,10 +151,14 @@ function sedcmd_scan () {
     usually because the scanner pty was too small. \
     Try increase ws_row to add some more lines.~
 
-  s~^ *([0-9]+) ([^\n\v\r]*)     (\S*)(\n|$)~\1\t\3\t\2\4~
-  /^[0-9]*\t/s~ +($|\n)~\1~
+  s~(\v<jump>){2}\v<end_of_list>\r?$(|\
+    )~\n\v<list_complete>~  # must be before tabulate
   s~\n(\v<up>|)\v<end_of_list>\v<jump>\r?$~\n\v<list_complete>~
   s~\v<end_of_list>~\n&~
+
+  # tabulate:
+  s~^ *([0-9]+) ([^\n\v\r]*)     (\S*)(\n|$)~\1\t\3\t\2\4~
+  /^[0-9]*\t/s~ +($|\n)~\1~
 
   s~ {8,}~… …~g
   /\n/{
