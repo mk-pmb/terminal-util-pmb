@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=gautoscreen
+Comment=
+Exec=gautoscreen
+Icon=utilities-terminal
+Type=Application
+Categories=Utility;TerminalEmulator;
+StartupNotify=false
