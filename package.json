@@ -16,6 +16,8 @@
 
   "private": true, "license": "GPL-3.0",
 
+  "scripts": { "postinstall": "node -r libdir-binlinks-cfg-linker-pmb" },
+
 
   "npm vs. BOM = Unexpected token": "-*- coding: UTF-8 -*-"
 }
