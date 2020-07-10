@@ -38,8 +38,18 @@ function autoscreen () {
 
 
 function sesslist () {
-  find "/var/run/screen/S-$USER/" -maxdepth 1 -type p -name '[0-9]*.*' \
-    -printf '%f\n' | cut -d . -sf 2 | sort -u | grep .
+  # Problem with scanning the default ${SCREENDIR}s: The decision which one
+  # screen will attempt to use, is rather complex.
+  #   find {/var,}/run/screen/S-"$USER"/ \
+  #     -maxdepth 1 -type p -name '[0-9]*.*' \
+  #     -printf '%f\n' | cut -d . -sf 2 | sort -u | grep .
+  # Thus, parsing -ls output is probably more failsafe in this case:
+  LANG=C screen -ls | sed -rf <(echo '
+    s~^\t[0-9]+\.~\n~
+    /\n/!d
+    s~^\n~~
+    s~(\t\([^()]+\))+$~~
+    ') | grep .
 }
 
 
