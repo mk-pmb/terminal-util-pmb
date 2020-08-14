@@ -21,7 +21,7 @@ function haxxterm_spawn () {
   local TERM_OPT=(
 
     # terminal launcher options:
-    --{sessname,winname}="$APPNAME"
+    --{sessname,winclass}="$APPNAME"
     # -T--hold
     -- # end of terminal launcher options
 
