@@ -252,10 +252,13 @@ function cfg_geom () {
   NUMS=( $(<<<"$GEOM" sed -nre "$NUMS") )
   case "$SHORT_TERM:${NUMS[0]}" in
     gnome:* ) cfg_geom_gnome "${NUMS[@]:1}"; return $?;;
-    xfce4:WxH )
+    xfce4:* )
+      # 2020-08-14: Full placement capability verified in trusty and focal.
       TERM_CMD+=( --geometry="$GEOM" ); return 0;;
     sakura:WxH )
-      TERM_CMD+=( -c "${NUMS[1]}" -r "${NUMS[2]}" ); return 0;;
+      # NB: In focal, sakura lost its ability to set window position using
+      #     --geometry. https://bugs.launchpad.net/sakura/+bug/1891667
+      TERM_CMD+=( --columns "${NUMS[1]}" --rows "${NUMS[2]}" ); return 0;;
   esac
 
   cfg_unsup_opt =
@@ -277,7 +280,10 @@ function cfg_geom_gnome () {
 
 function cfg_ensure_new_window () {
   case "$SHORT_TERM" in
-    xfce4 ) TERM_CMD+=( --disable-server );;
+    xfce4 )
+      TERM_CMD+=(
+        --disable-server
+        );;
     gnome )
       if [ "$TERM_VER" -lt 3008 ]; then
         TERM_CMD+=( --disable-factory )
@@ -311,7 +317,8 @@ function cfg_window_class () {
   [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: '$WINCLS'" >&2
   [ -z "$WINCLS" ] && return 0
   case "$SHORT_TERM" in
-    xfce4 | \
+    xfce4 )
+      INNER_HELPER+=( _set_winprop class="$WINCLS" );;
     gnome )
       # --class is deprecated: GNOME Bug #775383, WONTFIX
       INNER_HELPER+=( _set_winprop class="$WINCLS" );;
