@@ -9,6 +9,7 @@ function haxxterm () {
   local SELFPATH="$(dirname -- "$SELFFILE")"
   local APPNAME="$FUNCNAME"
   local SCREENS_LIST="$HOME/.config/Terminal/$APPNAME.screens.txt"
+  local BEST_SHELL='bash'
   local HAS_COLORDIFF=
   </dev/null colordiff &>/dev/null && HAS_COLORDIFF='colordiff'
 
@@ -52,7 +53,7 @@ function haxxterm_diff () {
   fi
   local PATHS_LIST="$(screen-windowlist "$APPNAME" | sed -re '
     s~^[0-9]+\t[^A-Za-z0-9]*\t~~
-    s~^[a-z0-9_-]+@[a-z0-9_-]+ bash (\~?/)~\1~
+    s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL")"' (\~?/)~\1~
     ')"
   diff -sU 9009009 -- "$SCREENS_LIST" <(echo "$PATHS_LIST")
 }
@@ -77,8 +78,8 @@ function haxxterm_welcome () {
   "${FUNCNAME}_prepare" || echo "W: ${FUNCNAME}_prepare rv=$?" >&2
 
   cd -- "$SC0_DIR" || cd -- "$HOME" || cd -- / || return $?
-  exec bash
-  return $?$(echo "E: exec bash failed: rv=$?" >&2; sleep 5s)
+  exec "$BEST_SHELL"
+  return $?$(echo "E: exec $BEST_SHELL failed: rv=$?" >&2; sleep 5s)
 }
 
 
