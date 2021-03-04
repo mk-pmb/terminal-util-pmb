@@ -4,12 +4,13 @@
 function autoscreen () {
   cd / || return $?
 
-  local OPT
+  local OPT=
   while [ "$#" -ge 1 ]; do
     OPT="$1"; shift
     case "$OPT" in
       -- ) break;;
       -ls ) sesslist; return $?;;
+      --bashrc ) decide_bashrc_startup; return $?;;
       * ) echo "E: $FUNCNAME: Unsupported option '$OPT'." >&2; return 3;;
     esac
   done
@@ -21,10 +22,14 @@ function autoscreen () {
     -h 0    # no scrollback history
     )
 
-  local OPT="${AS_CHDIR:-$HOME}"; unset AS_CHDIR
+  OPT="${AS_CHDIR:-$HOME}"; unset AS_CHDIR
   cd -- "$OPT" || echo "W: unable to chdir to: $OPT" >&2
 
-  local SESS="${AS_SESS:-$FUNCNAME}"; unset AS_SESS
+  local SESS="$AS_SESS"; unset AS_SESS
+  case "$SESS" in
+    *'?'* ) SESS="$(find_preferred_session "$SESS")" || return $?;;
+  esac
+  [ -n "$SESS" ] || SESS="$FUNCNAME"
   S_CMD+=( -S "$SESS" )
 
   sesslist | grep -qxFe "$SESS" && S_CMD+=(
@@ -50,6 +55,66 @@ function sesslist () {
     s~^\n~~
     s~(\t\([^()]+\))+$~~
     ') | grep .
+}
+
+
+function find_preferred_session () {
+  local WANT="$1"
+  local SESS=
+  local HAVE=$'\n'"$(sesslist)"$'\n'
+  while [[ "$WANT" == *'?'* ]]; do
+    SESS="${WANT%%\?*}"
+    WANT="${WANT#*\?}"
+    WANT="${WANT# }"
+    [ -n "$SESS" ] || continue
+    [[ "$HAVE" == *$'\n'"$SESS"$'\n'* ]] || continue
+    echo "$SESS"
+    break
+  done
+  [ -z "$WANT" ] || echo "$WANT"
+}
+
+
+function tmpfunc_bashrc_maybe_autoscreen () {
+  # Don't start an autoscreen if shell is not interactive,
+  # (which might be the case in e.g. an X11 start script.)
+  [ -n "$PS1" ] || return 0
+  [ -n "$TERM" ] || return 0
+
+  case "$(tty)" in
+    /dev/ttyS[0-9]* | \
+    /dev/ttyUSB[0-9]* | \
+    __serial__ ) return 0;;
+  esac
+
+  # Don't start an autoscreen inside another one.
+  [ -z "$STY" ] || return 0
+  case "$TERM" in
+    screen | screen.* ) return 0;;
+  esac
+
+  if [ -n "$SSH_CONNECTION" ]; then
+    export SSH_CONN_DISPLAY="$DISPLAY"
+    export DISPLAY=:0
+  fi
+
+  export AS_SESS='haxxterm?'
+
+  autoscreen || return $?
+
+  # Should we end the session automatically if autoscreen succeded?
+  [ -n "$SSH_CONNECTION" ] && exit 0
+  # ^-- If it is an SSH connection, then yes, quit.
+  # Emergency repairs can still be done by specifying a shell
+  # other than bash as the SSH command, or some command that
+  # disables this auto-exit.
+}
+
+
+function decide_bashrc_startup () {
+  local FUN='tmpfunc_bashrc_maybe_autoscreen'
+  local -fp "$FUN"
+  echo "$FUN; unset $FUN"
 }
 
 
