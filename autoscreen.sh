@@ -80,6 +80,7 @@ function tmpfunc_bashrc_maybe_autoscreen () {
   # (which might be the case in e.g. an X11 start script.)
   [ -n "$PS1" ] || return 0
   [ -n "$TERM" ] || return 0
+  tty --silent || return 0
 
   case "$(tty)" in
     /dev/ttyS[0-9]* | \
