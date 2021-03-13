@@ -2,7 +2,7 @@
 
 # append to the history file, don't overwrite it
 shopt -s histappend
-HISTCONTROL=ignoreboth
+HISTCONTROL=ignorespace:erasedups
 HISTSIZE=20
 
 # disable exclamation mark magic
