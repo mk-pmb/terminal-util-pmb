@@ -37,8 +37,8 @@ function haxxterm_spawn () {
 
 
 function haxxterm_scrl () {
-  ( [ -n "$DISPLAY" ] && leafpad "$SCREENS_LIST"
-    ) || nano "$SCREENS_LIST" || return $?
+  ( [ -n "$DISPLAY" ] && default-x-text-editor "$SCREENS_LIST"
+    ) || "$VISUAL" "$SCREENS_LIST" || return $?
   local SCRL_ABS="$(readlink -m -- "$SCREENS_LIST")"
   sed -re 's~\s+$~~' -i -- "$SCRL_ABS" || return $?
   # ^-- rel b/c otherwise sed would replace a potential symlink with
