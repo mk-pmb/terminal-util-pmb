@@ -4,8 +4,9 @@
 function gautoscreen () {
   cd / || return $?
 
-  export AS_SESS=gautoscreen
-  local AS_CMD=( autoscreen )
+  local AS_PROG='autoscreen'
+  export AS_SESS="$AS_PROG"
+  local AS_CMD=( "$AS_PROG" )
   local TERM_OPTS=()
   local OPT=
   while [ "$#" -gt 0 ]; do
