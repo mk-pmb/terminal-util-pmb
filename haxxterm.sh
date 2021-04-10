@@ -55,6 +55,12 @@ function haxxterm_diff () {
     s~^[0-9]+\t[^A-Za-z0-9]*\t~~
     s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL")"' (\~?/)~\1~
     ')"
+
+  local SL1="$(head --lines=1 -- "$SCREENS_LIST")"
+  [[ "$PATHS_LIST" == $'~/.config\n'* ]] \
+    && [[ "$SL1" == '~/.config ¶ '* ]] \
+    && PATHS_LIST="${PATHS_LIST/$'\n'/ ¶ }"
+
   diff -sU 9009009 -- "$SCREENS_LIST" <(echo "$PATHS_LIST")
 }
 
