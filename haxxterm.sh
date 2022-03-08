@@ -60,13 +60,19 @@ function haxxterm_diff () {
     s~^[0-9]+\t[^A-Za-z0-9]*\t~~
     s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL")"' (\~?/)~\1~
     ')"
-
-  local SL1="$(head --lines=1 -- "$SCREENS_LIST")"
-  [[ "$PATHS_LIST" == $'~/.config\n'* ]] \
-    && [[ "$SL1" == '~/.config ¶ '* ]] \
-    && PATHS_LIST="${PATHS_LIST/$'\n'/ ¶ }"
+  haxxterm_diff__maybe_merge_first_two_lines || return $?
 
   diff -sU 9009009 -- "$SCREENS_LIST" <(echo "$PATHS_LIST")
+}
+
+
+function haxxterm_diff__maybe_merge_first_two_lines () {
+  local SL1="$(head --lines=1 -- "$SCREENS_LIST")"
+  local DIR1="${SL1%% ¶ *}"
+  [ "$DIR1" != "$SL1" ] || return 0
+  local PL1="${PATHS_LIST%%$'\n'*}"
+  [ "$PL1" == "$DIR1" ] || return 0
+  PATHS_LIST="${PATHS_LIST/$'\n'/ ¶ }"
 }
 
 
