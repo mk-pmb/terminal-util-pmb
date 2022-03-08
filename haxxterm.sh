@@ -36,6 +36,11 @@ function haxxterm_spawn () {
 }
 
 
+function haxxterm_inner () {
+  AS_SESS="$APPNAME" autoscreen -- "$SELFFILE" welcome
+}
+
+
 function haxxterm_scrl () {
   ( [ -n "$DISPLAY" ] && default-x-text-editor "$SCREENS_LIST"
     ) || "$VISUAL" "$SCREENS_LIST" || return $?
@@ -90,7 +95,8 @@ function haxxterm_welcome () {
 
 
 function haxxterm_welcome_prepare () {
-  [ "$WINDOW" == 0 ] || return 4$(echo "E: panic: expected WINDOW=0" >&2)
+  [ "$WINDOW" == 0 ] || return 4$(
+    echo "E: panic: expected WINDOW=0, not '$WINDOW'" >&2)
   cd / || return $?
 
   xargs screen -X eval < <(sed -nre 's~^\s*([a-z])~\1~p' <<<'
