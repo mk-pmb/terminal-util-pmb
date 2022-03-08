@@ -1,5 +1,5 @@
 { "name": "terminal-util-pmb",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "Utilities for using shells and terminal emulators in GNU+Linux, especially Ubuntu.",
   "keywords": [],
 
@@ -16,7 +16,7 @@
 
   "private": true, "license": "GPL-3.0",
 
-  "scripts": { "postinstall": "node -r libdir-binlinks-cfg-linker-pmb" },
+  "scripts": { "postinstall": "node -r libdir-binlinks-cfg-linker-pmb -e 0" },
 
   "dependencies": {
     "libdir-binlinks-cfg-linker-pmb": "^0.1.2"
