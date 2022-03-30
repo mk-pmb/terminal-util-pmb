@@ -1,5 +1,5 @@
 { "name": "terminal-util-pmb",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Utilities for using shells and terminal emulators in GNU+Linux, especially Ubuntu.",
   "keywords": [],
 
