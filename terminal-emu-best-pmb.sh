@@ -18,14 +18,16 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-SELFFILE="$(readlink -m "$BASH_SOURCE")"; SELFPATH="$(dirname "$SELFFILE")"
-SELFNAME="$(basename "$SELFFILE" .sh)"; INVOKED_AS="$(basename "$0" .sh)"
-
-source "$SELFPATH/lib_wmutil.sh" --lib || exit $?
 
 
 function terminal_emu_best () {
+  local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
+  local SELFPATH="$(dirname -- "$SELFFILE")"
+  local INVOKED_AS="$(basename -- "$0" .sh)"
   local DBGLV="${DEBUGLEVEL:-0}"
+
+  source "$SELFPATH/lib_wmutil.sh" --lib || exit $?
+
   local ARG_WRAP_PRFX='_'
   [ "$DBGLV" -ge 4 ] && echo "D: $FUNCNAME args: $(dump_args "$@")" >&2
   if [ "$1" == "${ARG_WRAP_PRFX}WRAP" ]; then
@@ -95,8 +97,8 @@ function terminal_emu_best () {
   [ "${EXEC_APP[0]}" == "$SELFFILE" ] && shorten_self_exec
 
   [ -n "${CFG[forkoff]}" ] && TERM_CMD=( forkoff "${TERM_CMD[@]}" )
-  [ "$DBGLV" -ge 2 ] && echo "D: term cmd: $(dump_args "${TERM_CMD[@]}"
-    ) app: $(dump_args "${EXEC_APP[@]}")" >&2
+  [ "$DBGLV" -ge 2 ] && echo "D: $FUNCNAME: term cmd: $(
+    dump_args "${TERM_CMD[@]}") app: $(dump_args "${EXEC_APP[@]}")" >&2
 
   case "$SHORT_TERM" in
     gnome ) exec 2>/dev/null;;    # ignore its GIO-CRITICAL debug warnings
