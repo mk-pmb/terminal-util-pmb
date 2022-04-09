@@ -4,6 +4,7 @@
 function autoscreen () {
   cd / || return $?
 
+  local DBGLV="${DEBUGLEVEL:-0}"
   local OPT=
   while [ "$#" -ge 1 ]; do
     OPT="$1"; shift
@@ -101,6 +102,12 @@ function tmpfunc_bashrc_maybe_autoscreen () {
 
   export AS_SESS='haxxterm?'
 
+  if [ "$DBGLV" -ge 0 ]; then
+    echo "D: $FUNCNAME: not starting autoscreen: DEBUGLEVEL='$DEBUGLEVEL'" >&2
+    echo "D: $FUNCNAME: delay…" >&2
+    sleep 5s
+    return 0
+  fi
   autoscreen || return $?
 
   # Should we end the session automatically if autoscreen succeded?

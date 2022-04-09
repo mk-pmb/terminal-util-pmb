@@ -12,6 +12,7 @@ function haxxterm () {
   local BEST_SHELL='bash'
   local HAS_COLORDIFF=
   </dev/null colordiff &>/dev/null && HAS_COLORDIFF='colordiff'
+  local DBGLV="${DEBUGLEVEL:-0}"
 
   "${FUNCNAME}_${RUNMODE:-spawn}" "$@"
   return $?
@@ -19,7 +20,8 @@ function haxxterm () {
 
 
 function haxxterm_spawn () {
-  local TERM_OPT=(
+  local SPAWN=(
+    gautoscreen
 
     # terminal launcher options:
     --{sessname,winclass}="$APPNAME"
@@ -32,7 +34,8 @@ function haxxterm_spawn () {
     # screen command:
     "$SELFFILE" welcome
     )
-  gautoscreen "${TERM_OPT[@]}"
+  [ "$DBGLV" -lt 2 ] || echo "D: $FUNCNAME: ${SPAWN[*]}" >&2
+  "${SPAWN[@]}"
 }
 
 
@@ -95,6 +98,17 @@ function haxxterm_welcome () {
   "${FUNCNAME}_prepare" || echo "W: ${FUNCNAME}_prepare rv=$?" >&2
 
   cd -- "$SC0_DIR" || cd -- "$HOME" || cd -- / || return $?
+
+  if [ "$DBGLV" -ge 2 ]; then
+    echo "D: $FUNCNAME: local -p:" >&2
+    local -p >&2
+    echo "D: $FUNCNAME: starting a plain bash rather than BEST_SHELL='"$(
+      )"$BEST_SHELL'" >&2
+    local DEBCH='haxxterm debug'
+    [ -z debian_chroot ] || DEBCH+=": $debian_chroot"
+    debian_chroot="$DEBCH" exec bash -i || echo "W: $DEBCG: rv=$?" >&2
+  fi
+
   exec "$BEST_SHELL"
   return $?$(echo "E: exec $BEST_SHELL failed: rv=$?" >&2; sleep 5s)
 }
