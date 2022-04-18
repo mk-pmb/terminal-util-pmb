@@ -78,7 +78,7 @@ function xterm_with_custom_icon () {
   done
 
   [ "$DBGLV" -lt 2 ] || echo "D: $PROGNAME: run:$(
-    printf -- ' ‹%s›' ${XT[@]})" >&2
+    printf -- ' ‹%s›' "${XT[@]}")" >&2
   exec "${XT[@]}" "$@" || return $?
 }
 
