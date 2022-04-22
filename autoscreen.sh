@@ -38,7 +38,16 @@ function autoscreen () {
     -x      # … but don't detach other sides.
     )
 
-  setsid "${S_CMD[@]}" -- "$@" || return $?$(
+  local ABS_SHELL="$(readlink -f -- "$(which -- "$SHELL" 2>/dev/null)")"
+  case "$ABS_SHELL" in
+    */ash | \
+    */sh | \
+    */busybox | \
+    . ) export SHELL='/bin/bash';;
+  esac
+
+  setsid true &>/dev/null && S_CMD=( setsid "${S_CMD[@]}" )
+  "${S_CMD[@]}" -- "$@" || return $?$(
     echo "W: screen exited with rv=$?" >&2)
 }
 
@@ -50,12 +59,12 @@ function sesslist () {
   #     -maxdepth 1 -type p -name '[0-9]*.*' \
   #     -printf '%f\n' | cut -d . -sf 2 | sort -u | grep .
   # Thus, parsing -ls output is probably more failsafe in this case:
-  LANG=C screen -ls | sed -rf <(echo '
+  LANG=C screen -ls | sed -re '# <-- no -f <(): No /dev/fd/* on busybox :-(
     s~^\t[0-9]+\.~\n~
     /\n/!d
     s~^\n~~
     s~(\t\([^()]+\))+$~~
-    ') | grep .
+    ' | grep .
 }
 
 
@@ -81,7 +90,8 @@ function tmpfunc_bashrc_maybe_autoscreen () {
   # (which might be the case in e.g. an X11 start script.)
   [ -n "$PS1" ] || return 0
   [ -n "$TERM" ] || return 0
-  tty --silent || return 0
+  tty -s || return 0
+  # ^-- short option for busybox compat
 
   case "$(tty)" in
     /dev/ttyS[0-9]* | \

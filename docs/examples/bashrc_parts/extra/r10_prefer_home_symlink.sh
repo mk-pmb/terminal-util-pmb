@@ -1,7 +1,7 @@
 # -*- coding: utf-8, tab-width: 2 -*-
 
 function tmpfunc_prefer_home_symlink () {
-  local ABS_HOME="$(readlink -m -- "$HOME")"
+  local ABS_HOME="$(readlink -f -- "$HOME")"
   [ "$ABS_HOME" == "$HOME" ] && return 0
   [[ "$PWD"/ == "$ABS_HOME"/* ]] || return 0
   local SYM="$HOME${PWD:${#ABS_HOME}}"

@@ -31,8 +31,11 @@ function pluggable_bashrc_sourcer () {
     done
   done
 
-  readarray -t FILES < <(printf '%s\n' "${FILES[@]}" \
-    | sort --version-sort | cut -sf 2)
+  # Use a temporary string variable rather than < <() subprocess
+  # because some embedded devices don't provide /dev/fd/*
+  FILES="$(printf '%s\n' "${FILES[@]}" | sort -V | cut -sf 2)"
+  readarray -t FILES <<<"${FILES[0]}"
+  [ "${#FILES[@]}:${FILES[0]}" == 1: ] && FILES=()
 
   local NICK=
   for ITEM in "${FILES[@]}"; do case "$ITEM" in
@@ -41,7 +44,7 @@ function pluggable_bashrc_sourcer () {
       [[ "$NICK" == "$HOME/"* ]] && NICK="~${NICK:${#HOME}}"
       echo
       echo "# ==---BEGIN---== $NICK ==---== #"
-      cat -- "$ITEM"
+      sed -re 's|<<\$plug:src\$>>'"|$ITEM|g" -- "$ITEM"
       echo
       echo "# ==---ENDOF---== $NICK ==---== #"
       echo
