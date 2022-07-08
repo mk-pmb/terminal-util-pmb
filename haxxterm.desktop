@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=haxxterm
+Comment=
+Exec=haxxterm
+Icon=utilities-terminal
+Type=Application
+Categories=Utility;TerminalEmulator;
+StartupNotify=false
