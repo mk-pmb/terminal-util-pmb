@@ -19,6 +19,13 @@ function haxxterm () {
 }
 
 
+function haxxterm_guess_xwinid () {
+  LANG=C wmctrl -xl | LANG=C sed -nrf <(echo '
+    s~^(0x\S+)\s+\S+\s+\S+\.'"$APPNAME"'\s.*$~\1~p
+    ') | grep -xPe '0x\w+' || return $?
+}
+
+
 function haxxterm_spawn () {
   local SPAWN=(
     gautoscreen
