@@ -33,6 +33,11 @@ function screen_args_title () {
   fi
   [ "$DIR" != . ] && S_TITLE+=" @ ${DIR/$HOME/~}"
 
+  # No idea how to put the pipe symbol (|) into the title; the visually
+  # closest symbol I found that works in screen v4.08.00 is the
+  # exclamation point (!).
+  S_TITLE="${S_TITLE//\|/!}"
+
   cd /
   exec screen -t "$S_TITLE" sh -c 'cd "$0" && exec "$@"' "$DIR" "$PROG" "$@"
   return $?
