@@ -66,13 +66,17 @@ function haxxterm_diff () {
     "$FUNCNAME" | "$HAS_COLORDIFF" | less -rS
     return 0
   fi
-  local PATHS_LIST="$(screen-windowlist "$APPNAME" | sed -re '
+  local PATHS_LIST="$(haxxterm_guess_active_shell_paths_keep_unknown)"
+  haxxterm_diff__maybe_merge_first_two_lines || return $?
+  diff -sU 9009009 -- "$SCREENS_LIST" <(echo "$PATHS_LIST")
+}
+
+
+function haxxterm_guess_active_shell_paths_keep_unknown () {
+  screen-windowlist "$APPNAME" | sed -rf <(echo '
     s~^[0-9]+\t[^A-Za-z0-9]*\t~~
     s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL")"' (\~?/)~\1~
-    ')"
-  haxxterm_diff__maybe_merge_first_two_lines || return $?
-
-  diff -sU 9009009 -- "$SCREENS_LIST" <(echo "$PATHS_LIST")
+    ')
 }
 
 
