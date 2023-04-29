@@ -2,14 +2,16 @@
 # -*- coding: utf-8, tab-width: 2 -*-
 
 
-function haxxterm () {
-  local RUNMODE="$1"; shift
+function haxxterm_main () {
+  export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
+  local APPNAME="${HAXXTERM_SESS:-${FUNCNAME%%_*}}"
+  export HAXXTERM_SESS="$APPNAME"
 
+  local RUNMODE="$1"; shift
   local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
   local SELFPATH="$(dirname -- "$SELFFILE")"
   local PKGNAME='terminal-util-pmb'
-  local APPNAME="$FUNCNAME"
-  local SCREENS_LIST="$HOME/.config/Terminal/$APPNAME.screens.txt"
+  local SCREENS_LIST="$HOME/.config/Terminal/screen_lists/$APPNAME.htsl"
 
   local CACHE_DIR="$HOME/.cache/$PKGNAME/$APPNAME"
   mkdir --parents --mode=a=,u=rwx -- "$CACHE_DIR" || true
@@ -21,7 +23,7 @@ function haxxterm () {
   </dev/null colordiff &>/dev/null && HAS_COLORDIFF='colordiff'
   local DBGLV="${DEBUGLEVEL:-0}"
 
-  "${FUNCNAME}_${RUNMODE:-spawn}" "$@"
+  "${FUNCNAME%%_*}_${RUNMODE:-spawn}" "$@"
   return $?
 }
 
@@ -50,6 +52,38 @@ function haxxterm_spawn () {
     )
   [ "$DBGLV" -lt 2 ] || echo "D: $FUNCNAME: ${SPAWN[*]}" >&2
   "${SPAWN[@]}"
+}
+
+
+function haxxterm_spawn_unloaded_sessions () {
+  local SLDIR="$(dirname -- "$SCREENS_LIST")"
+  local FEXT=".${SCREENS_LIST##*.}"
+
+  local WANT=(
+    "$SLDIR"/
+    -mindepth 1
+    -maxdepth 1
+    -type f
+    -name '*.htsl'
+    -printf '%f\n'
+    )
+  readarray -t WANT < <(find "${WANT[@]}" | sed -re 's~\.[a-z]*$~~')
+  [ "${#WANT[@]}" -ge 1 ] || WANT+=( "$APPNAME" )
+
+  local HAVE='s~^0x\S+ +\S+ +(gnome-terminal-server.)(\S+) .*$~\2~p'
+  HAVE=$'\n'"$(wmctrl -xl | sed -nre "$HAVE")"$'\n'
+
+  local HAD=/
+  local SESS=
+  for SESS in "${WANT[@]}"; do
+    echo -n "· '$SESS': "
+    if [[ "$HAVE" == *$'\n'"$SESS"$'\n'* ]]; then
+      echo 'found.'
+    else
+      echo 'spawn!'
+      HAXXTERM_SESS="$SESS" haxxterm spawn
+    fi
+  done
 }
 
 
@@ -193,4 +227,4 @@ function haxxterm_welcome_prepare () {
 
 
 
-haxxterm "$@"; exit $?
+haxxterm_main "$@"; exit $?
