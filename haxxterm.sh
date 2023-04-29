@@ -7,8 +7,15 @@ function haxxterm () {
 
   local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
   local SELFPATH="$(dirname -- "$SELFFILE")"
+  local PKGNAME='terminal-util-pmb'
   local APPNAME="$FUNCNAME"
   local SCREENS_LIST="$HOME/.config/Terminal/$APPNAME.screens.txt"
+
+  local CACHE_DIR="$HOME/.cache/$PKGNAME/$APPNAME"
+  mkdir --parents --mode=a=,u=rwx -- "$CACHE_DIR" || true
+  # ^-- Failure is ok in preparation. If something really needs it,
+  #     it will fail later.
+
   local BEST_SHELL='bash'
   local HAS_COLORDIFF=
   </dev/null colordiff &>/dev/null && HAS_COLORDIFF='colordiff'
@@ -62,6 +69,9 @@ function haxxterm_scrl () {
 
 
 function haxxterm_diff () {
+  #
+  # For visual diff, see "meld" below.
+  #
   if [ -n "$HAS_COLORDIFF" ] && tty --silent <&1; then
     "$FUNCNAME" | "$HAS_COLORDIFF" | less -rS
     return 0
@@ -87,6 +97,35 @@ function haxxterm_diff__maybe_merge_first_two_lines () {
   local PL1="${PATHS_LIST%%$'\n'*}"
   [ "$PL1" == "$DIR1" ] || return 0
   PATHS_LIST="${PATHS_LIST/$'\n'/ ¶ }"
+}
+
+
+function haxxterm_meld () {
+  local BEST_MELD='
+    meld
+    diffuse
+    '
+  BEST_MELD="$(which $BEST_MELD 2>/dev/null | grep -m 1 -Pe '^/')"
+  [ -x "$BEST_MELD" ] || return 3$(echo "E: Cannot find the meld program." >&2)
+  local TMP_FILE="$CACHE_DIR"/screens.tmp
+  # ^-- We could use `mktemp --tmpdir=… -- …` but then we'd have to wait for
+  #     the meld to close and then clean it up. Easier to use just a default
+  #     fixed path to at least limit our littering. Anyone worried about
+  #     access permissions can pre-create $CACHE_DIR safely.
+
+  local PATHS_LIST="$(haxxterm_guess_active_shell_paths_keep_unknown)"
+  haxxterm_diff__maybe_merge_first_two_lines || return $?
+
+  # Meld on default settings doesn't scroll below end of file,
+  # so let's add lots of padding:
+  local PAD=
+  printf -v PAD '\n%05d\n\r%040d' 0 0
+  PAD="${PAD//0/$'\n#'}"
+  PAD="${PAD/$'\r'/'# padding for easier scrolling in meld:'}"
+
+  echo "$PATHS_LIST$PAD" >"$TMP_FILE"
+  "$BEST_MELD" "$SCREENS_LIST" "$TMP_FILE" &
+  return $?
 }
 
 
