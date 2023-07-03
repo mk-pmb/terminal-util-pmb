@@ -265,10 +265,7 @@ function haxxterm_set_icon () {
     ICON="$ORIG"
 
     if [ "${ICON:0:1}" == '*' ]; then
-      ICON='/usr/share/icons/'
-      # ^-- Trailing slash is to make find ignore whether "icons" is a symlink.
-      ICON="$(find "$ICON" -mindepth 1 -xdev -type f -path "$ICON${ORIG:1}")"
-      ICON="${ICON%%$'\n'*}"
+      ICON="$(haxxterm_find_icon "${ICON:1}")"
       [ -f "$ICON" ] || continue$(
         echo "W: $FUNCNAME: Unable to find icon for pattern '$ORIG'" >&2)
     fi
@@ -281,6 +278,18 @@ function haxxterm_set_icon () {
 
   echo "E: $FUNCNAME: Failed to set icon ($N_CANDI candidates)." >&2
   return 4
+}
+
+
+function haxxterm_find_icon () {
+  local PAT="$1"
+  local D='/usr/share/icons/'
+  # ^-- Trailing slash is to make find ignore whether "icons" is a symlink.
+  local FOUND="$(find "$D" -mindepth 1 -xdev -type f -path "$D$PAT" \
+    | sort --version-sort --reverse | head --lines=1)"
+    # ^-- reverse version-sort usually picks the largest variant.
+  [ -n "$FOUND" ] || return 2
+  echo "$FOUND"
 }
 
 
