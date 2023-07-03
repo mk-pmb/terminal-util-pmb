@@ -4,14 +4,15 @@
 
 function haxxterm_main () {
   export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
-  local APPNAME="${HAXXTERM_SESS:-${FUNCNAME%%_*}}"
-  export HAXXTERM_SESS="$APPNAME"
-
-  local RUNMODE="$1"; shift
   local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
   local SELFPATH="$(dirname -- "$SELFFILE")"
   local PKGNAME='terminal-util-pmb'
+
+  local APPNAME="${HAXXTERM_SESS:-${FUNCNAME%%_*}}"
+  export HAXXTERM_SESS="$APPNAME"
   local SCREENS_LIST="$HOME/.config/Terminal/screen_lists/$APPNAME.htsl"
+  local RUNMODE="$1"; shift
+  [ -n "$RUNMODE" ] || RUNMODE='spawn'
 
   local CACHE_DIR="$HOME/.cache/$PKGNAME/$APPNAME"
   mkdir --parents --mode=a=,u=rwx -- "$CACHE_DIR" || true
@@ -23,7 +24,7 @@ function haxxterm_main () {
   </dev/null colordiff &>/dev/null && HAS_COLORDIFF='colordiff'
   local DBGLV="${DEBUGLEVEL:-0}"
 
-  "${FUNCNAME%%_*}_${RUNMODE:-spawn}" "$@"
+  "${FUNCNAME%%_*}_$RUNMODE" "$@"
   return $?
 }
 
