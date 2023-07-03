@@ -73,8 +73,8 @@ function haxxterm_spawn_unloaded_sessions () {
   readarray -t WANT < <(find "${WANT[@]}" | sed -re 's~\.[a-z]*$~~')
   [ "${#WANT[@]}" -ge 1 ] || WANT+=( "$APPNAME" )
 
-  local HAVE='s~^0x\S+ +\S+ +(gnome-terminal-server.)(\S+) .*$~\2~p'
-  HAVE=$'\n'"$(wmctrl -xl | sed -nre "$HAVE")"$'\n'
+  local HAVE='s~^0x\S+ +\S+ +(gnome-terminal(-server|).\S+) .*$~\1~p'
+  HAVE=$'\n'"$(wmctrl -xl | sed -nre "$HAVE" | cut -d . -sf 2-)"$'\n'
 
   local HAD=/
   local SESS=
