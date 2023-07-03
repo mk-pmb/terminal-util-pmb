@@ -43,6 +43,8 @@ function haxxterm_spawn () {
     # terminal launcher options:
     --{sessname,winclass}="$APPNAME"
     # -T--hold
+    -W"$SELFFILE"
+    -W'inner'
     -- # end of terminal launcher options
 
     # autoscreen options:
@@ -89,7 +91,15 @@ function haxxterm_spawn_unloaded_sessions () {
 
 
 function haxxterm_inner () {
-  AS_SESS="$APPNAME" autoscreen -- "$SELFFILE" welcome
+  haxxterm_set_icon || true
+
+  if [ "$#" == 0 -o "$#:$1" == 1: ]; then
+    echo "E: $FUNCNAME: Expected a command to exec in this shell." >&2
+    sleep 10s
+    return 3
+  fi
+
+  exec "$@" || return $?
 }
 
 
