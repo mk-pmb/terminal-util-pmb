@@ -48,7 +48,7 @@ function haxxterm_spawn () {
     # autoscreen options:
     -- # end of autoscreen options
 
-    # screen command:
+    # screen command (will only run if the screen session does not yet exist):
     "$SELFFILE" welcome
     )
   [ "$DBGLV" -lt 2 ] || echo "D: $FUNCNAME: ${SPAWN[*]}" >&2
