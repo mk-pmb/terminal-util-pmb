@@ -235,6 +235,56 @@ function haxxterm_welcome_prepare () {
 }
 
 
+function haxxterm_set_icon () {
+  # This should be run outside of "welcome", because we want to set/update
+  # the icon even if the screen session already exists.
+
+  local WIN_ID="$(haxxterm_guess_xwinid)"
+  [ -n "$WIN_ID" ] || return 5$(
+    echo "E: $FUNCNAME: Failed to guess window ID for session '$APPNAME'." >&2)
+
+  local CANDIDATES=()
+  readarray -t CANDIDATES < <(
+    sed -nre 's~^##:term:icon:\s+~~p' -- "$SCREENS_LIST")
+  local N_CANDI="${#CANDIDATES[@]}"
+  [ "$N_CANDI" -ge 1 ] || return 0
+  [ "$N_CANDI:${CANDIDATES[0]}" != 1: ] || return 0
+
+  local ORIG= ICON=
+  for ORIG in "${CANDIDATES[@]}"; do
+    ICON="$ORIG"
+
+    if [ "${ICON:0:1}" == '*' ]; then
+      ICON='/usr/share/icons/'
+      # ^-- Trailing slash is to make find ignore whether "icons" is a symlink.
+      ICON="$(find "$ICON" -mindepth 1 -xdev -type f -path "$ICON${ORIG:1}")"
+      ICON="${ICON%%$'\n'*}"
+      [ -f "$ICON" ] || continue$(
+        echo "W: $FUNCNAME: Unable to find icon for pattern '$ORIG'" >&2)
+    fi
+
+    xseticon-pmb "$WIN_ID" GUESS "$ICON" && return 0
+    echo "E: $FUNCNAME: Failed to set icon '$ICON' for session" \
+      "'$APPNAME' (window ID $WIN_ID)." >&2
+    continue
+  done
+
+  echo "E: $FUNCNAME: Failed to set icon ($N_CANDI candidates)." >&2
+  return 4
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
