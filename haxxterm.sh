@@ -164,16 +164,31 @@ function haxxterm_meld () {
 }
 
 
+function haxxterm_parse_screenlist_cfg () {
+  sed -nrf <(echo '
+    s~^##:term:([A-Za-z0-9_-]+):\s+~\1\n~
+    /\n/!b
+    s~\x27+~\x27"&"\x27~g
+    s~$~\x27~
+    s~^(\S+)\n~[\1]=\x27~
+    p
+    ') -- "$@"
+}
+
+
 function haxxterm_welcome () {
   clear
   export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
   local TERM_PATHS=()
-  readarray -t TERM_PATHS < <(sed -nre '
+  readarray -t TERM_PATHS < <(sed -nrf <(echo '
     s~^\s+~~
     \:^\~?/:!b
     s!\s+¶\s+!\n!g
     p
-    ' -- "$SCREENS_LIST")
+    ') -- "$SCREENS_LIST")
+
+  # local -A TERM_CFG=()
+  # eval "TERM_CFG=( $(haxxterm_parse_screenlist_cfg "$SCREENS_LIST") )"
 
   local SC0_DIR="${TERM_PATHS[0]}"
   case "$SC0_DIR" in
