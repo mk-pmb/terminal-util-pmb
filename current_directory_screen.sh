@@ -49,7 +49,7 @@ function prepare_window () {
   local DEST_DIR="$1"; shift
   local MENU=
   while true; do
-    cd "$ORIG_PWD" && cd "$DEST_DIR" && break
+    cd -- "$ORIG_PWD" && cd -- "$DEST_DIR" && break
     echo
     echo "Failed to chdir."
     echo "  orig: $ORIG_PWD"
@@ -67,7 +67,11 @@ function prepare_window () {
     case "$MENU" in
       e ) read -er -i "$DEST_DIR" -p '  new dest: ' DEST_DIR;;
       t ) "$SHELL";;
-      m ) mkdir --parents --verbose -- "$DEST_DIR";;
+      m )
+        mkdir --parents --verbose -- "$ORIG_PWD" \
+          && cd -- "$ORIG_PWD" \
+          && mkdir --parents --verbose -- "$DEST_DIR"
+        ;;
       c ) return 4;;
       q ) break;;
     esac
