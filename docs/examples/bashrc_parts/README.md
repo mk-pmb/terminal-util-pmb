@@ -1,9 +1,8 @@
 ﻿
-pluggable-bashrc-sourcer
+Pluggable bashrc sourcer
 ========================
 
-* `~/bashrc`:
-  `eval "$("$HOME"/lib/terminal-util-pmb/pluggable-bashrc-sourcer.sh r)"`
-* `~/profile`:
-  `eval "$("$HOME"/lib/terminal-util-pmb/pluggable-bashrc-sourcer.sh p)"`
+* Copy the dot files from [`home.rcfiles/`](home.rcfiles/)
+  into your home directory.
+  * You may want to backup your old ones first.
 
