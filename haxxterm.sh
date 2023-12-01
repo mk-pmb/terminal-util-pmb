@@ -11,6 +11,8 @@ function haxxterm_main () {
   local APPNAME="${HAXXTERM_SESS:-${FUNCNAME%%_*}}"
   export HAXXTERM_SESS="$APPNAME"
   local SCREENS_LIST="$HOME/.config/Terminal/screen_lists/$APPNAME.htsl"
+  local -A CFG=()
+  eval "CFG=( $(haxxterm_parse_config_dict) )"
   local RUNMODE="$1"; shift
   [ -n "$RUNMODE" ] || RUNMODE='spawn'
 
@@ -19,6 +21,7 @@ function haxxterm_main () {
   # ^-- Failure is ok in preparation. If something really needs it,
   #     it will fail later.
 
+  local TTY_SIZE=( $(stty size) )
   local BEST_SHELL='bash'
   local HAS_COLORDIFF=
   </dev/null colordiff &>/dev/null && HAS_COLORDIFF='colordiff'
@@ -27,6 +30,9 @@ function haxxterm_main () {
   "${FUNCNAME%%_*}_$RUNMODE" "$@"
   return $?
 }
+
+
+function vdo_terse () { echo "X: $*"; "$@"; }
 
 
 function haxxterm_guess_xwinid () {
@@ -224,24 +230,56 @@ function haxxterm_welcome () {
 }
 
 
+function haxxterm_screen_eval_debug () {
+  zenity --question --title "$FUNCNAME" --text "$*" || return 0
+  screen -X eval "$@"
+}
+
+
 function haxxterm_welcome_prepare () {
   [ "$WINDOW" == 0 ] || return 4$(
     echo "E: panic: expected WINDOW=0, not '$WINDOW'" >&2)
   cd / || return $?
 
-  xargs screen -X eval < <(sed -nre 's~^\s*([a-z])~\1~p' <<<'
-    defcaption always
-    defvbell on
-    split
-    fit
-    focus next
-    fit
-    windowlist -b
-    focus prev
-    ')
+  local HAVE_ROWS="${TTY_SIZE[0]:-0}"
+  local HAVE_COLS="${TTY_SIZE[1]:-0}"
+  yes '' | head -n 90
+  local MIN_ROWS="${CFG[panel_min_rows]:-26}"
+  local MIN_COLS="${CFG[panel_min_cols]:-121}"
+  local HBAR_SPLIT=$(( ( HAVE_ROWS / MIN_ROWS ) - 1 ))
+  [ "${HBAR_SPLIT:-0}" -ge 1 ] || HBAR_SPLIT=0
+  local VBAR_SPLIT=$(( ( HAVE_COLS / MIN_COLS ) - 1 ))
+  [ "${VBAR_SPLIT:-0}" -ge 1 ] || VBAR_SPLIT=0
+  local SCE='screen -X eval'
+  # SCE='vdo_terse screen -X eval'
+  # SCE='haxxterm_screen_eval_debug'
+  # not eval-able --> $SCE 'defcaption always'
+  # not eval-able --> $SCE 'defvbell on'
 
-  ( sleep 1s; cdscreen "${TERM_PATHS[@]:1}" ) &
+  local DUMMY=
+  for DUMMY in $(seq 1 $HBAR_SPLIT); do $SCE split; done
+  for DUMMY in $(seq 0 $HBAR_SPLIT); do
+    for DUMMY in $(seq 1 $VBAR_SPLIT); do $SCE 'split -v'; done
+    for DUMMY in $(seq 0 $VBAR_SPLIT); do
+      $SCE fit
+      $SCE 'focus next'
+    done
+  done
+
+  $SCE 'focus next'
+  $SCE 'windowlist -b'
+  $SCE 'focus prev'
+
+  cdscreen "${TERM_PATHS[@]:1}" & wait
+  # ^-- Fork + wait makes the top-left pane stay at window 0.
+
   return 0
+}
+
+
+function haxxterm_parse_config_dict () {
+  sed -nre 's~^##:term:([^: \t\r\f=#]+)\s*=\s*~[\1\t~p' -- "$SCREENS_LIST" \
+    | sed -re 's~\x27+~\x27\x22&\x22\x27~g; s~\t~]=\x27~; s~$~\x27~'
 }
 
 
