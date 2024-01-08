@@ -19,10 +19,10 @@
   "scripts": { "postinstall": "node -r libdir-binlinks-cfg-linker-pmb -e 0" },
 
   "dependencies": {
-    "libdir-binlinks-cfg-linker-pmb": "^0.1.2"
+    "libdir-binlinks-cfg-linker-pmb": "^0.1.5"
   },
   "devDependencies": {},
 
 
-  "npm vs. BOM = Unexpected token": "-*- coding: UTF-8 -*-"
+  "engines": { "bash": ">=4.0.0" }
 }
