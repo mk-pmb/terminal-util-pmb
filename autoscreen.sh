@@ -112,7 +112,7 @@ function tmpfunc_bashrc_maybe_autoscreen () {
 
   export AS_SESS='haxxterm?'
 
-  if [ "$DBGLV" -ge 0 ]; then
+  if [ "${DEBUGLEVEL:-0}" -ge 1 ]; then
     echo "D: $FUNCNAME: not starting autoscreen: DEBUGLEVEL='$DEBUGLEVEL'" >&2
     echo "D: $FUNCNAME: delay…" >&2
     sleep 5s
