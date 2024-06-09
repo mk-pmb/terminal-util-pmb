@@ -3,14 +3,6 @@
 
 
 function smart_less_pmb () {
-  # page if overflow
-  case "$1" in
-    -x )
-      echo 'H: Did you mean -xN (--tabs=N) or -e (--exec)?' >&2
-      echo "E: $0: invalid option: $1" >&2
-      return 1;;
-    -e | --exec ) shift; "$@" 2>&1 | smart_less_pmb; return $?;;
-  esac
   local LESS_OPTS=(
     --quit-if-one-screen
     --no-init
@@ -18,7 +10,16 @@ function smart_less_pmb () {
       #     text after quit, esp. instant --quit-if-one-screen.
     --RAW-CONTROL-CHARS
     )
-  less "${LESS_OPTS[@]}" "$@"
+  while [ "${1:0:1}" == '+' ]; do LESS_OPTS+=( "$1" ); shift; done
+  local CHILD=
+  case "$1" in
+    -x )
+      echo 'H: Did you mean -xN (--tabs=N) or -e (--exec)?' >&2
+      echo "E: $0: invalid option: $1" >&2
+      return 1;;
+    -e | --exec ) shift; exec < <(exec "$@" 2>&1); CHILD=$!; set --;;
+  esac
+  less "${LESS_OPTS[@]}" "$@" && wait $CHILD
   return $?
 }
 
