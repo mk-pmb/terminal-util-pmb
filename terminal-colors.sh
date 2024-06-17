@@ -22,10 +22,9 @@ function terminal_colors () {
     97x4%
     30x10%
     )
-  local ROW=
-  local HUE=
-  local BGC=
-  local FGC=
+  local ROW= HUE=
+  local BGC= FGC=
+  local MARKED_HUE=
   local LABEL=
   for ROW in "${ROWS[@]}"; do
     case "$ROW" in
@@ -48,12 +47,14 @@ function terminal_colors () {
     done
     echo
   done
+
+  echo
+  echo '256 color (8 bit) palette: [38;5;…m = text, [48;5;…m = background'
+  COLWIDTH= draw_8bit_palette
 }
 
 
-function esc_seq_cell () {
-  echo -ne "\x1b$1"
-}
+function esc_seq_cell () { echo -ne "\x1b$1"; }
 
 
 function rcell () {
@@ -94,6 +95,25 @@ function parenthesized_numbers () {
   # parenthesized digit nine = U+247c = C-hex: E2 91 BC = oct: 342 221 274
   LANG=C tr '1-9' '\264-\274' | LANG=C sed -re '
     s~[\xB4-\xBC]~\xE2\x91&~g; s~0~\xE2\x93\x9E~g'
+}
+
+
+function draw_8bit_palette () {
+  local COLS="${1:-32}"
+  local COLOR= FMT='%- 4s'
+  echo -n '      '
+  for COLOR in $(seq 0 $(( COLS - 1 )) ); do
+    printf "$FMT" "+$COLOR"
+  done
+  for COLOR in $(seq 0 255); do
+    if [ $(( COLOR % 32 )) == 0 ]; then
+      [ "$COLOR" == 0 ] || echo -n $'\x1b[0m'
+      echo
+      printf "% 3u+… " "$COLOR"
+    fi
+    printf "\x1b[48;5;%sm$FMT" "$COLOR" ''
+  done
+  echo $'\x1b[0m'
 }
 
 
