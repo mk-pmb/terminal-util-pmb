@@ -134,9 +134,15 @@ function haxxterm_diff () {
 
 
 function haxxterm_guess_active_shell_paths_keep_unknown () {
+  local HOME_RGX="${HOME//[^A-Za-z0-9_/-]/}"
+  # ^-- Proper quotemeta woul be overkill here. Let's just discard characters
+  #   that don't belong in a $HOME path in the first place.
+
   screen-windowlist "$APPNAME" | sed -rf <(echo '
     s~^[0-9]+\t[^A-Za-z0-9]*\t~~
-    s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL")"' (\~?/)~\1~
+    s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL"
+      )"' (\?{2} |)(\~?/|'"$HOME_RGX"'/)~\2~
+    s!^'"$HOME_RGX"'(/|$)!\~\1!
     ')
 }
 
