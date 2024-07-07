@@ -30,7 +30,7 @@ alias grep='grep --color=auto'
 alias Q=exit
 
 alias less='less --tilde --RAW-CONTROL-CHARS --chop-long-lines'
-alias nano='nano --nowrap'
+nano --help | grep -qFe ' --nowrap ' && alias nano='nano --nowrap'
 alias ssh='TERM=xterm-color ssh'
 
 alias cronedit='crontab -e'     # <-- never again mistype -r
