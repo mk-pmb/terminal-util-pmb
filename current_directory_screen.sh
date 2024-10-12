@@ -31,7 +31,8 @@ function cdscreen () {
     case "$DEST_DIR" in
       '~' | '~/'* ) DEST_DIR="$HOME${DEST_DIR#\~}";;
     esac
-    DIR_TITLE="$(cd "$ORIG_PWD" && cd "$DEST_DIR" && pwd)"
+    DIR_TITLE="$( ( cd -- "$ORIG_PWD" && cd -- "$DEST_DIR" && pwd
+      ) 2>/dev/null)"
     case "$DIR_TITLE" in
       '' ) DIR_TITLE="?? $DEST_DIR";;
       "$HOME" ) DIR_TITLE=~/;;
