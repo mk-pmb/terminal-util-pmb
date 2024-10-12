@@ -47,7 +47,8 @@ function cdscreen () {
 function prepare_window () {
   local ORIG_PWD="$1"; shift
   local DEST_DIR="$1"; shift
-  local MENU=
+  local MENU= RV=
+  local AUTORETRY_SEC=10
   while true; do
     cd -- "$ORIG_PWD" && cd -- "$DEST_DIR" && break
     echo
@@ -62,7 +63,12 @@ function prepare_window () {
     MENU+=' [c]lose screen window,'
     MENU+=' [q]uit to a new shell,'
     MENU+=' any other key: retry'
-    read -rs -n 1 -p "$MENU? " MENU
+    read -rs -n 1 -t $AUTORETRY_SEC -p "$MENU? " MENU; RV=$?
+    if [ "$RV" -gt 128 ]; then
+      printf -- '\n[%(%F %T)T] %s\n' -1 \
+        "No input for $AUTORETRY_SEC seconds => auto-retry."
+      continue
+    fi
     echo "$MENU"
     case "$MENU" in
       e ) read -er -i "$DEST_DIR" -p '  new dest: ' DEST_DIR;;
