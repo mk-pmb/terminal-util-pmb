@@ -37,6 +37,9 @@ function pluggable_bashrc_sourcer () {
   readarray -t FILES <<<"${FILES[0]}"
   [ "${#FILES[@]}:${FILES[0]}" == 1: ] && FILES=()
 
+  echo 'function in_func () { "$@"; }'
+  echo
+
   local NICK=
   for ITEM in "${FILES[@]}"; do case "$ITEM" in
     *.inline.sh )
@@ -51,7 +54,7 @@ function pluggable_bashrc_sourcer () {
       ;;
     * )
       [[ "$ITEM" == "$HOME/"* ]] && ITEM='$HOME'"${ITEM:${#HOME}}"
-      echo 'source -- "'"$ITEM"'" --bashrc || return $?'
+      echo 'in_func source -- "'"$ITEM"'" --bashrc || return $?'
       ;;
   esac; done
 }
