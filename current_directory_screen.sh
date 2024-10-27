@@ -3,7 +3,7 @@
 
 
 function cdscreen () {
-  local SELFFILE="$(readlink -m -- "$0")"
+  local SELFFILE="$(readlink -f -- "$BASH_SOURCE")"
   case "$TERM" in
     screen | screen.* ) ;;
     * ) echo "fatal: $0 only works inside a screen." >&2; return 1;;

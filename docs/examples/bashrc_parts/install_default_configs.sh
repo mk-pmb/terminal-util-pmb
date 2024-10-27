@@ -4,7 +4,7 @@
 
 function install_main () {
   export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
-  local SELFPATH="$(readlink -m -- "$BASH_SOURCE"/..)"
+  local SELFPATH="$(readlink -f -- "$BASH_SOURCE"/..)"
   cd -- "$SELFPATH" || return $?
   local REPO_DIR="${SELFPATH%/*/*/*}"
 

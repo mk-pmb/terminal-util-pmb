@@ -4,7 +4,7 @@
 
 function haxxterm_main () {
   export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
-  local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
+  local SELFFILE="$(readlink -f -- "$BASH_SOURCE")"
   local SELFPATH="$(dirname -- "$SELFFILE")"
   local PKGNAME='terminal-util-pmb'
 
@@ -112,7 +112,7 @@ function haxxterm_inner () {
 function haxxterm_scrl () {
   ( [ -n "$DISPLAY" ] && default-x-text-editor "$SCREENS_LIST"
     ) || "$VISUAL" "$SCREENS_LIST" || return $?
-  local SCRL_ABS="$(readlink -m -- "$SCREENS_LIST")"
+  local SCRL_ABS="$(readlink -f -- "$SCREENS_LIST")"
   sed -re 's~\s+$~~' -i -- "$SCRL_ABS" || return $?
   # ^-- rel b/c otherwise sed would replace a potential symlink with
   #     a regular text file.

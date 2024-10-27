@@ -21,7 +21,7 @@
 
 
 function terminal_emu_best () {
-  local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
+  local SELFFILE="$(readlink -f -- "$BASH_SOURCE")"
   local SELFPATH="$(dirname -- "$SELFFILE")"
   local INVOKED_AS="$(basename -- "$0" .sh)"
   local DBGLV="${DEBUGLEVEL:-0}"
@@ -572,7 +572,7 @@ function shorten_self_exec () {
   for INVO in "$INVOKED_AS"; do
     RSLV="$(which "$INVO" 2>/dev/null)"
     [ -n "$RSLV" ] || continue
-    RSLV="$(readlink -m "$RSLV")"
+    RSLV="$(readlink -f -- "$RSLV")"
     [ "$RSLV" == "$SELFFILE" ] || continue
     EXEC_APP[0]="$INVOKED_AS"
     return 0

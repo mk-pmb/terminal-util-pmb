@@ -3,7 +3,7 @@
 
 
 function xterm_with_custom_icon () {
-  local SELFPATH="$(readlink -m -- "$BASH_SOURCE"/..)"
+  local SELFPATH="$(readlink -f -- "$BASH_SOURCE"/..)"
   local PROGNAME="$FUNCNAME"
   local XT=()
   local WRAP_EXEC=()
