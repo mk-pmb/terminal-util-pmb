@@ -227,7 +227,7 @@ function haxxterm_welcome () {
     echo "D: $FUNCNAME: starting a plain bash rather than BEST_SHELL='"$(
       )"$BEST_SHELL'" >&2
     local DEBCH='haxxterm debug'
-    [ -z debian_chroot ] || DEBCH+=": $debian_chroot"
+    [ -z "$debian_chroot" ] || DEBCH+=": $debian_chroot"
     debian_chroot="$DEBCH" exec bash -i || echo "W: $DEBCG: rv=$?" >&2
   fi
 
