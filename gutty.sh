@@ -20,7 +20,6 @@ function gutty () {
   local GUTTY_TERM_PROFILE_PREFIX='SSH on '
   local GUTTY_TERM_PROFILE_SUFFIX=''
   local GUTTY_SSH_MIN_DURATION=5
-  export TERM=xterm-color
 
   # check unitialized config variables:
   # grep -oPe '\$GUTTY\w+' $(which gutty) | sort | uniq -c
