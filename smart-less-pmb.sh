@@ -10,15 +10,19 @@ function smart_less_pmb () {
       #     text after quit, esp. instant --quit-if-one-screen.
     --RAW-CONTROL-CHARS
     )
-  while [ "${1:0:1}" == '+' ]; do LESS_OPTS+=( "$1" ); shift; done
-  local CHILD=
-  case "$1" in
-    -x )
-      echo 'H: Did you mean -xN (--tabs=N) or -e (--exec)?' >&2
-      echo "E: $0: invalid option: $1" >&2
-      return 1;;
-    -e | --exec ) shift; exec < <(exec "$@" 2>&1); CHILD=$!; set --;;
-  esac
+  local ARG= CHILD=
+  while [ "$#" -ge 1 ]; do
+    case "$1" in
+      -x )
+        echo 'H: Did you mean -xN (--tabs=N) or -e (--exec)?' >&2
+        echo "E: $0: invalid option: $1" >&2
+        return 1;;
+      -e | --exec ) shift; exec < <(exec "$@" 2>&1); CHILD=$!; set --;;
+      -[A-Za-z]* | \
+      +* ) LESS_OPTS+=( "$1" ); shift;;
+      * ) break;;
+    esac
+  done
   less "${LESS_OPTS[@]}" "$@" && wait $CHILD
   return $?
 }
