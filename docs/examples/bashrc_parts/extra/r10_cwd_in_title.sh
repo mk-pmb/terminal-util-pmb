@@ -50,6 +50,7 @@ function tmpfunc_bashrc_cwd_in_title () {
     # echo "$(date +'%F %T') $$@$WINDOW: $NEW_TITLE" >>"$HOME"/.cdtitle.txt
     [ "${DEBUGLEVEL:-0}" -ge 3 ] && SET_TITLE=( echo "${SET_TITLE[@]}" )
     "${SET_TITLE[@]}" "$NEW_TITLE" 2>/dev/null
+    printf '\x1b]0;%s\x07' "$NEW_TITLE"
     return $CD_RV
   }
   cd .
