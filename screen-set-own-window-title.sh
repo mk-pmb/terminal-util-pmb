@@ -15,6 +15,12 @@ function screen_set_own_window_title () {
       terminal-set-title "$TITLE";;
     -- ) shift; TITLE="$*";;
   esac
+
+  # Unfortunately Ubuntu focal's "screen" seems to not have proper
+  # UTF-8 support for titles.
+  TITLE="${TITLE//…/...}"
+  TITLE="${TITLE//[^ -~]/?}"
+
   screen -p "$WINDOW" -X title "$TITLE"
   return 0
 }
