@@ -23,7 +23,7 @@ function smart_less_pmb () {
       * ) break;;
     esac
   done
-  less "${LESS_OPTS[@]}" "$@" && wait $CHILD
+  less "${LESS_OPTS[@]}" "$@" && wait $CHILD 2>/dev/null
   return $?
 }
 
