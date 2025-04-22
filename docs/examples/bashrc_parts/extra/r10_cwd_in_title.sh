@@ -20,6 +20,14 @@ function tmpfunc_bashrc_cwd_in_title () {
     echo "$ENV_WARN" >&2
     return 2
   fi
+  unset ENV_WARN
+
+  local ST="$(screentitle --resolve-self 2>/dev/null)"
+  [ -f "$ST" ] || ST="$( "$HOME"/bin/screentitle --resolve-self 2>/dev/null )"
+  source -- "$ST" --lib || return 0$(echo W: >&2 \
+    "Unable to load the 'screentitle' command from terminal-util-pmb." \
+    "(Required for $BASH_SOURCE)")
+  unset ST
 
   function cd () {
     local CD_ARGS=( "$@" )
@@ -36,10 +44,7 @@ function tmpfunc_bashrc_cwd_in_title () {
       * )           HSUB=;;
     esac
 
-    local SET_TITLE=( screen -p "$WINDOW" -X title )
-    # ^-- w/o -p, "cd" in a background window would rename the active window.
-    [ -n "$SUDO_USER" ] && SET_TITLE=(
-      sudo -u "$SUDO_USER" -E "${SET_TITLE[@]}" )
+    local SET_TITLE=( screen_set_own_window_title --and-term )
     local SHORT_PWD="$PWD"
     case "$SHORT_PWD" in
       "$HOME" ) SHORT_PWD='~/';;
@@ -50,7 +55,6 @@ function tmpfunc_bashrc_cwd_in_title () {
     # echo "$(date +'%F %T') $$@$WINDOW: $NEW_TITLE" >>"$HOME"/.cdtitle.txt
     [ "${DEBUGLEVEL:-0}" -ge 3 ] && SET_TITLE=( echo "${SET_TITLE[@]}" )
     "${SET_TITLE[@]}" "$NEW_TITLE" 2>/dev/null
-    printf '\x1b]0;%s\x07' "$NEW_TITLE"
     return $CD_RV
   }
   cd .

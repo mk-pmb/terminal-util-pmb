@@ -3,16 +3,26 @@
 
 
 function screen_set_own_window_title () {
+  local SELFFILE="$(readlink -f -- "$BASH_SOURCE")"
+  case "$1" in
+    --resolve-self ) echo "$SELFFILE"; return $?;;
+  esac
+
   [ -n "$STY" ] || return 2
   [ -n "$WINDOW" ] || return 2
   [ "${TERM%%.*}" == screen ] || return 2
+
+  local SELFPATH="$(dirname -- "$SELFFILE")"
+  local USE_SUDO=()
+  [ -z "$SUDO_USER" ] || USE_SUDO=( sudo -u "$SUDO_USER" -E )
+
   local TITLE="$*"
   case "$1" in
     --printf ) shift; TITLE="$(printf "$@")";;
     --and-term )
       shift
       TITLE="$*"
-      terminal-set-title "$TITLE";;
+      "$SELFPATH"/terminal-set-title.sh "$TITLE";;
     -- ) shift; TITLE="$*";;
   esac
 
@@ -21,7 +31,7 @@ function screen_set_own_window_title () {
   TITLE="${TITLE//…/...}"
   TITLE="${TITLE//[^ -~]/?}"
 
-  screen -p "$WINDOW" -X title "$TITLE"
+  "${USE_SUDO[@]}" screen -p "$WINDOW" -X title "$TITLE"
   return 0
 }
 
