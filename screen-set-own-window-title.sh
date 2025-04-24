@@ -29,7 +29,11 @@ function screen_set_own_window_title () {
   # Unfortunately Ubuntu focal's "screen" seems to not have proper
   # UTF-8 support for titles.
   TITLE="${TITLE//…/...}"
-  TITLE="${TITLE//[^ -~]/?}"
+
+  case "$BASH_VERSION" in
+    [1-4].* ) TITLE="${TITLE//[^ -z\{\}~]/?}";; # <- No idea why [^ -~] fails.
+    * ) TITLE="${TITLE//[^ -~]/?}";;
+  esac
 
   "${USE_SUDO[@]}" screen -p "$WINDOW" -X title "$TITLE"
   return 0
