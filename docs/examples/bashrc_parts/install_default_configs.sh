@@ -4,14 +4,14 @@
 
 function install_main () {
   export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
-  local SELFPATH="$(readlink -f -- "$BASH_SOURCE"/..)"
+  local SELFPATH="$(readlink -m -- "$BASH_SOURCE"/..)"
   cd -- "$SELFPATH" || return $?
   local REPO_DIR="${SELFPATH%/*/*/*}"
 
   exec </dev/null
   local TUP_HSUB="/lib/terminal-util-pmb"
   local PLUGBS_MAIN='pluggable-bashrc-sourcer.sh'
-  local HTUP="$HOME/lib/terminal-util-pmb"
+  local HTUP="$HOME$TUP_HSUB"
   [ "$REPO_DIR" -ef "$HTUP" ] || return 3$(
     echo "E: Expected '$REPO_DIR' and '$HTUP' to be the same directory." >&2)
 
