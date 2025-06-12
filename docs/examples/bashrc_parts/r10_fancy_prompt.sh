@@ -3,6 +3,7 @@
 PS1='\u@\h:\w\$ '
 
 case "$TERM" in
+  xterm-256color | \
   xterm-color | \
   screen | screen.* | \
   __color-capable__ )
