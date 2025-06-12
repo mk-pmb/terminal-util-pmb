@@ -37,7 +37,8 @@ function pluggable_bashrc_sourcer () {
   readarray -t FILES <<<"${FILES[0]}"
   [ "${#FILES[@]}:${FILES[0]}" == 1: ] && FILES=()
 
-  echo 'function in_func () { "$@"; }'
+  echo 'function in_func () { "$@" || return $?$(echo W: >&2' \
+    '"Failed (rv=$?) to $*"); }'
   echo
 
   local NICK=
