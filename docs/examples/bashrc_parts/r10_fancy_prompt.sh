@@ -10,7 +10,7 @@ case "$TERM" in
     ;;
 esac
 
-PS1='${debian_chroot:+($debian_chroot)}'"$PS1"
+[ -z "$debian_chroot" ] || PS1="$($debian_chroot)$PS1"
 
 if dircolors --version &>/dev/null; then
   eval "$(dircolors -b)"
