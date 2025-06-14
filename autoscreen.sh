@@ -86,6 +86,8 @@ function find_preferred_session () {
 
 
 function tmpfunc_bashrc_maybe_autoscreen () {
+  [ "${0:0:1}" == - ] || return 0 # Only auto-start autoscreen in login shells.
+
   # Don't start an autoscreen if shell is not interactive,
   # (which might be the case in e.g. an X11 start script.)
   [ -n "$PS1" ] || return 0
