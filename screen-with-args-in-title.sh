@@ -23,7 +23,9 @@ function screen_args_title () {
       DIR=.;;
   esac
 
-  local S_TITLE="$USER@$HOSTNAME $PROG"
+  local HOST_NICK="$HOSTNAME"
+  HOST_NICK="${HOST_NICK%%.*}"
+  local S_TITLE="$USER@$HOST_NICK $PROG"
   local ARGS_PREVIEW="$*"
   if [ -n "$ARGS_PREVIEW" ]; then
     [ -n "$COLUMNS" ] || COLUMNS="$(stty size | grep -oPe ' \d+$')"
