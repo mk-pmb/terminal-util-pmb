@@ -33,7 +33,7 @@ function screen_args_title () {
     let HALFCOLS="$COLUMNS/ 2"
     S_TITLE+=" ${ARGS_PREVIEW:0:$HALFCOLS}"
   fi
-  [ "$DIR" != . ] && S_TITLE+=" @ ${DIR/$HOME/~}"
+  [ "$DIR" != . ] && S_TITLE+=" @ ${DIR/#$HOME/'~'}"
 
   # No idea how to put the pipe symbol (|) into the title; the visually
   # closest symbol I found that works in screen v4.08.00 is the
