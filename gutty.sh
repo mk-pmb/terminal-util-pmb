@@ -87,7 +87,9 @@ function gutty () {
   fi
 
   local INNER_CMD="'$SELFFILE' --ssh-wrapper $(
-    )'$SSH_USER' '$DEST_HOST' '$DEST_PORT' -X"
+    )'$SSH_USER' '$DEST_HOST' '$DEST_PORT'"
+  INNER_CMD+=' -X' # always request X forwarding
+  INNER_CMD+=' -t' # always request a TTY
   local TERM_CMD=( "$TERM_BIN" )
   export GUTTY_WINTITLE="$TERM_PROFILE"
   TERM_CMD+=( --title="$GUTTY_WINTITLE" )
@@ -178,6 +180,7 @@ function ssh_wrapper () {
   done
 
   SSH_CMD+=( "$@" )
+  SSH_CMD+=( $(<<<"$CFG" sed -nre 's~^ssh_args=~~p') )
   local SSH_RTV=
   echo "D: gutty: run: ${SSH_CMD[@]}"
   SECONDS=0    # bash timer magic
