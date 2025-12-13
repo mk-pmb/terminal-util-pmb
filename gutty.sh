@@ -179,7 +179,7 @@ function ssh_wrapper () {
 
   SSH_CMD+=( "$@" )
   local SSH_RTV=
-  echo "${SSH_CMD[@]}"
+  echo "D: gutty: run: ${SSH_CMD[@]}"
   SECONDS=0    # bash timer magic
   "${SSH_CMD[@]}"
   SSH_RTV=$?
