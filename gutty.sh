@@ -26,7 +26,8 @@ function gutty () {
 
   local CFG=
   for CFG in "${GUTTY_CONFIGS[@]}"; do
-    [ -f "$CFG" ] && source "$CFG"
+    [ -f "$CFG" ] || continue
+    source -- "$CFG" || echo W: "Failed to read config (rv=$?): $CFG" >&2
   done
 
   if [ "$1" == "--ssh-wrapper" ]; then
