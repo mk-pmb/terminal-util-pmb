@@ -30,7 +30,7 @@ function gutty () {
     source -- "$CFG" || echo W: "Failed to read config (rv=$?): $CFG" >&2
   done
 
-  if [ "$1" == "--ssh-wrapper" ]; then
+  if [ "$1" == --ssh-wrapper ]; then
     echo "D: Waiting for TTY to adapt itself to the terminal window size…"
     sleep 1s
     echo "D: Gonna SSH now."
