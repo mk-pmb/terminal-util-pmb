@@ -5,7 +5,7 @@
 function gutty () {
   export LANG{,UAGE}=en_US.UTF-8  # make error messages search engine-friendly
   local SELFFILE="$(readlink -m -- "$BASH_SOURCE")"
-  # local SELFPATH="$(dirname -- "$SELFFILE")"
+  local SELFPATH="$(dirname -- "$SELFFILE")"
   cd / || return $?   # avoid locking the orig cwd
   local GUTTY_APPNAME='GuTTY'
   local GUTTY_CONFIGS=(
@@ -30,6 +30,7 @@ function gutty () {
     source -- "$CFG" || echo W: "Failed to read config (rv=$?): $CFG" >&2
   done
 
+  if [ "$1" == --func ]; then shift; "$@"; return $?; fi
   if [ "$1" == --ssh-wrapper ]; then
     echo "D: Waiting for TTY to adapt itself to the terminal window size…"
     sleep 1s
@@ -166,7 +167,8 @@ function ssh_wrapper () {
   [ -n "$SSH_USER" ] && SSH_LOGIN="${SSH_USER}@${SSH_LOGIN}"
   local SSH_CMD=( ssh "$SSH_LOGIN" )
   [ -n "$DEST_PORT" ] && SSH_CMD+=( -p "$DEST_PORT" )
-  local CFG="$(ssh -G "$DEST_HOST" | sed -nre 's~^setenv gutty_~~p')"
+  local CFG="$("$SELFPATH"/ssh_config_for_host.sh "$DEST_HOST" |
+    sed -nre 's~^#:gutty:~~p')"
   local DEST_ICON="$(<<<"$CFG" sed -nre 's~^icon=~~p')"
 
   # SSHW_PID="$$" debian_chroot=ssh:debug bash -i || return $?
