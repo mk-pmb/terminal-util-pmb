@@ -13,7 +13,11 @@ function set_terminal_title () {
   # [removed:] attempts to warn about PS1 and PROMPT_COMMAND,
   # but they aren't exported to programs running in the shell.
 
-  printf '\x1b]0;%s\x07' "$*"; exit $?
+  local TTY_FD=
+  for TTY_FD in 0 1 2 ''; do
+    tty --silent <&$TTY_FD && break
+  done
+  [ -z "$TTY_FD" ] || printf '\x1b]0;%s\x07' "$*" >&"$TTY_FD"; exit $?
 }
 
 
