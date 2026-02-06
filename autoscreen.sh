@@ -86,8 +86,6 @@ function find_preferred_session () {
 
 
 function tmpfunc_bashrc_maybe_autoscreen () {
-  [ "${0:0:1}" == - ] || return 0 # Only auto-start autoscreen in login shells.
-
   # Don't start an autoscreen if shell is not interactive,
   # (which might be the case in e.g. an X11 start script.)
   [ -n "$PS1" ] || return 0
@@ -102,10 +100,21 @@ function tmpfunc_bashrc_maybe_autoscreen () {
   esac
 
   # Don't start an autoscreen inside another one.
-  [ -z "$STY" ] || return 0
+  local RUNNING_IN_SCREEN=
+  [ -z "$STY" ] || RUNNING_IN_SCREEN=+
   case "$TERM" in
-    screen | screen.* ) return 0;;
+    screen | screen.* ) RUNNING_IN_SCREEN=+;;
   esac
+  if [ -n "$RUNNING_IN_SCREEN" ]; then
+    [ -f "$HOME/.screenrc" ] || echo W: autoscreen: >&2 \
+      "You seem to not have a ~/.screenrc." \
+      "Consider >>~/.screenrc for defaults; for recommended settings, try:" \
+      "ln --symbolic --no-target-directory --" \
+      "lib/terminal-util-pmb/docs/examples/screenrc.txt ~/.screenrc"
+    return 0
+  fi
+
+  [ "${0:0:1}" == - ] || return 0 # Only auto-start autoscreen in login shells.
 
   if [ -n "$SSH_CONNECTION" ]; then
     export SSH_CONN_DISPLAY="$DISPLAY"
