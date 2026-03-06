@@ -38,6 +38,8 @@ function tmpfunc_bashrc_cwd_in_title () {
     fi
     command cd "${CD_ARGS[@]}"
     local CD_RV=$?
+    [ $BASH_SUBSHELL == 0 ] || return $CD_RV
+
     case "$PWD" in
       "$HOME" )     HSUB='.';;
       "$HOME"/* )   HSUB="${PWD#$HOME/}";;
