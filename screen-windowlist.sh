@@ -84,7 +84,7 @@ function screen_windowlist () {
       return 0;;
   esac
   echo "E: incomplete data:" >&2
-  <<<"$SCAN_DATA" LANG=C sed -re '
+  echo "$SCAN_DATA" | LANG=C sed -re '
     s~\v~¡~g
     s~^[0-9]+\t\$\t.*$~000\t…\tdummy~
     ' | uniq --count | LANG=C sed -re '
