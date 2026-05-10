@@ -16,8 +16,8 @@ function screen_windowlist () {
   # A really high number shouldn't impact performance, because
   # (a) screen jumps to absolute coordinates instead of printing
   #     lots of blank lines, and
-  # (b) the scan stops reading as soon as the first list is printed,
-  # I've no idea why screen prints the list multiple times anyway.
+  # (b) the scan stops reading as soon as the first list is printed.
+  # I have no idea why screen prints the list multiple times anyway.
 
   local PTY_COLS=767  # sed seems to be limited to (3*256)-1 bytes
   PTY_COLS=256  # should be enough for most users -> prefer performance.
