@@ -3,6 +3,7 @@
 
 
 function terminal_colors () {
+  echo
   local COLWIDTH=10
   rcell '1'   '[%m = bold'
   rcell '2'   '[%m = dim '
@@ -14,43 +15,45 @@ function terminal_colors () {
   echo '   30+ = text color, +40 = background,' \
     '90+ = slim bright, 100+ = bright background:'
 
-  COLWIDTH=8
-  local ROWS=(
-    # :
-    3%x40
-    9%x40
-    97x4%
-    30x10%
-    )
-  local ROW= HUE=
-  local BGC= FGC=
-  local MARKED_HUE=
-  local LABEL=
-  for ROW in "${ROWS[@]}"; do
-    case "$ROW" in
-    : ) FGC=0; BGC=7; LABEL='___________________%_';;
-    *x* )
-      FGC="${ROW%%x*}"; BGC="${ROW##*x}"
-      LABEL="$(printf '% 3s×%- 3s' "$FGC" "$BGC")";;
-    * ) FGC=0; BGC=0; LABEL="$ROW";;
-    esac
-    for HUE in {0..7}; do
-      case "$ROW" in
-      : ) MARKED_HUE="$HUE";;
-      * )
-        # MARKED_HUE="$HUE"
-        # MARKED_HUE="$(echo -n "$HUE" | circled_numbers) "
-        MARKED_HUE="$(echo -n "$HUE" | parenthesized_numbers) "
-        ;;
-      esac
-      rcell "${FGC//%/$HUE};${BGC//%/$HUE}" "${LABEL//%/$MARKED_HUE}"
-    done
-    echo
-  done
+  draw_basic_colors_chart
 
   echo
   echo '256 color (8 bit) palette: [38;5;…m = text, [48;5;…m = background'
-  COLWIDTH= draw_8bit_palette
+  draw_8bit_palette
+}
+
+
+function draw_basic_colors_chart () {
+  local TX_DF= BG_DF= TX_CC= BG_CC=
+  local COLWIDTH=8 HUE= MARKED_HUE= LABEL=
+  set -- $(echo '
+    3%  40
+    9%  40
+    97  4%
+    30  10%
+    ')
+  while [ "$#" -ge 1 ]; do
+    TX_DF="$1"; shift
+    BG_DF="$1"; shift
+    for HUE in {0..7}; do
+      # MARKED_HUE="$HUE"
+      # MARKED_HUE="$(unicode_circled_digit "$HUE") "
+      MARKED_HUE="$(unicode_parenthesized_digit "$HUE") "
+      TX_CC="$TX_DF"
+      BG_CC="$BG_DF"
+      case "$TX_CC,$BG_CC,$HUE" in
+        # Improve readability in edge cases:
+        [39]%,40,0 )  BG_CC=47;;
+        30,10%,[01] ) TX_CC=97;;
+        97,4%,7 )     TX_CC=30;;
+      esac
+      LABEL="$(printf -- '% 3s×%- 3s' "$TX_CC" "$BG_CC")"
+      TX_CC="$TX_CC;$BG_CC"
+      TX_CC="${TX_CC//%/$HUE}"
+      rcell "$TX_CC" "${LABEL//%/$MARKED_HUE}"
+    done
+  echo
+  done
 }
 
 
@@ -63,7 +66,7 @@ function rcell () {
   TEXT="${TEXT//%/$COLORS}"
   echo -n '  '
   [ -n "$COLORS" ] && printf '\x1b[%sm' "$COLORS"
-  <<<"                         $TEXT" tr -d '\n' | LANG=C sed -re '
+  echo -n "                         $TEXT" | LANG=C sed -re '
     s~^.*(([\x00-\x7F]|[\x80-\xFF]{2,3}){'"$COLWIDTH"'})$~\1~
     #s~(×)10(\S+)~\1\xE2\x8F\xA8\2 ~g
     '
@@ -71,30 +74,36 @@ function rcell () {
 }
 
 
-function small_numbers () {
-  # subscript zero          = U+2080 = C-hex: E2 82 80 = oct: 342 202 200
-  # subscript nine          = U+2089 = C-hex: E2 82 89 = oct: 342 202 211
-  # decimal exponent symbol = U+23e8 = C-hex: E2 8F A8 = oct: 342 217 250
-  #   ^-- a small subscript 10
-  LANG=C tr '0-9' '\200-\211' | LANG=C sed -re 's~[\x80-\x89]~\xE2\x82&~g'
+function unicode_small_digit () {
+  # U+2080  subscript zero          = E2 82 80
+  # U+2089  subscript nine          = E2 82 89
+  # U+23e8  decimal exponent symbol = E2 8F A8   # a small subscript 10
+  echo -ne '\xE2\x82\x8'"$1"
 }
 
 
-function circled_numbers () {
-  # circled digit zero = U+24ea = C-hex: E2 93 AA = oct: 342 223 252
-  # circled digit one  = U+2460 = C-hex: E2 91 A0 = oct: 342 221 240
-  # circled digit nine = U+2468 = C-hex: E2 91 A8 = oct: 342 221 250
-  LANG=C tr '1-9' '\240-\250' | LANG=C sed -re '
-    s~[\xA0-\xA8]~\xE2\x91&~g; s~0~\xE2\x93\xAA~g'
+function unicode_circled_digit () {
+  # U+24ea  circled digit zero  = E2 93 AA
+  # U+2460  circled digit one   = E2 91 A0
+  # U+2468  circled digit nine  = E2 91 A8
+  case "$1" in
+    0 ) echo -ne '\xE2\x93\xAA';;
+    [1-9] ) echo -ne '\xE2\x91\xA'$(( "$1" - 1 ));;
+  esac
 }
 
 
-function parenthesized_numbers () {
-  # circled latin small o    = U+24de = C-hex: E2 93 9E = oct: 342 223 236
-  # parenthesized digit one  = U+2474 = C-hex: E2 91 B4 = oct: 342 221 264
-  # parenthesized digit nine = U+247c = C-hex: E2 91 BC = oct: 342 221 274
-  LANG=C tr '1-9' '\264-\274' | LANG=C sed -re '
-    s~[\xB4-\xBC]~\xE2\x91&~g; s~0~\xE2\x93\x9E~g'
+function unicode_parenthesized_digit () {
+  # U+24AA  parenthesized latin small letter o    = E2 92 AA
+  # U+2474  parenthesized digit one               = E2 91 B4
+  # U+247c  parenthesized digit nine              = E2 91 BC
+  case "$1" in
+    0 ) echo -ne '\xE2\x92\xAA';;
+    [1-6] ) echo -ne '\xE2\x91\xB'$(( "$1" + 3 ));;
+    7 ) echo -ne '\xE2\x91\xBA';;
+    8 ) echo -ne '\xE2\x91\xBB';;
+    9 ) echo -ne '\xE2\x91\xBC';;
+  esac
 }
 
 
