@@ -128,6 +128,8 @@ function haxxterm_diff () {
     return 0
   fi
   local PATHS_LIST="$(haxxterm_guess_active_shell_paths_keep_unknown)"
+  [ -n "$PATHS_LIST" ] || return 4$(
+    echo E: $FUNCNAME: 'Unable to obtain paths list.' >&2)
   haxxterm_diff__maybe_merge_first_two_lines || return $?
   diff -sU 9009009 -- "$SCREENS_LIST" <(echo "$PATHS_LIST")
 }
@@ -171,6 +173,8 @@ function haxxterm_meld () {
   #     access permissions can pre-create $CACHE_DIR safely.
 
   local PATHS_LIST="$(haxxterm_guess_active_shell_paths_keep_unknown)"
+  [ -n "$PATHS_LIST" ] || return 4$(
+    echo E: $FUNCNAME: 'Unable to obtain paths list.' >&2)
   haxxterm_diff__maybe_merge_first_two_lines || return $?
 
   # Meld on default settings doesn't scroll below end of file,
