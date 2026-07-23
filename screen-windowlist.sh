@@ -94,6 +94,7 @@ function screen_windowlist () {
     s~^\s+([0-9]+)\s(.*)$~\2   × \1~
     s~^~E:    ~
     ' >&2
+  echo "H: Set SCREEN_WINLIST_DUMP_RAW to a filename to dumo raw input." >&2
   return 4
 }
 
