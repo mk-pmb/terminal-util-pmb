@@ -141,7 +141,7 @@ function haxxterm_guess_active_shell_paths_keep_unknown () {
   #   that don't belong in a $HOME path in the first place.
 
   screen-windowlist "$APPNAME" | sed -rf <(echo '
-    s~^[0-9]+\t[^A-Za-z0-9]*\t~~
+    s~^wn [0-9]+\tfl \S*\twt ~~ # Drop window number and flags
     s~^[a-z0-9_-]+@[a-z0-9_-]+ '"$(basename -- "$BEST_SHELL"
       )"' (\?{2} |)(\~?/|'"$HOME_RGX"'/)~\2~
     s!^'"$HOME_RGX"'(/|$)!\~\1!
