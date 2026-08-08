@@ -102,13 +102,26 @@ function screen_windowlist () {
 
   [ "$DBGLV" -ge 4 ] && echo "D: $FUNCNAME: scan took $SCAN_DURA ms" >&2
 
-  case "$SCAN_DATA" in
-    $'\v<start_list>\n'*$'\n\v<list_complete>' )
-      SCAN_DATA="${SCAN_DATA#*$'\n'}"
-      SCAN_DATA="${SCAN_DATA%$'\n'*}"
-      echo "$SCAN_DATA"
-      return 0;;
-  esac
+  print_scan_data_if_sane || print_failure_report || return $?
+}
+
+
+function print_scan_data_if_sane () {
+  [[ "$SCAN_DATA" == $'\v<start_list>\n'* ]] || return 4$(
+    echo W: "Result doesn't start with list start symbol!" >&2)
+  SCAN_DATA="${SCAN_DATA#*$'\n'}"
+
+  [[ "$SCAN_DATA" == *$'\n\v<list_complete>' ]] || return 4$(
+    echo W: "Result doesn't end with list end symbol!" >&2)
+  SCAN_DATA="${SCAN_DATA%$'\n'*}"
+
+  [ -z "${SCAN_DATA//[^$'\v']/}" ] || return 4$(
+    echo W: "Result contains unexpected control symbols!" >&2)
+  echo "$SCAN_DATA"
+}
+
+
+function print_failure_report () {
   echo "E: incomplete data:" >&2
   echo "$SCAN_DATA" | LANG=C sed -re '
     s~\v~¡~g
@@ -173,25 +186,27 @@ function parse_screen_list_dump_stage1 () {
     s~(\v<jump_to_origin>\v<erase>|\v<clear_right>|$\
       )+(\v<col_heads>)~\2~g
     s~ {50,}~\v<wide_space>~g
-    ') | LANG=C sed -re '/^$/d;1{/<-clear_very_many_lines>$/d}' |
-    sed -re '/^\v<win /s~$~\v</win>~' |
-    sed -zre 's~(\v</win>)\n~\n\1~g;s~\n\v</win>(\v<win )~\n\1~g'
+  ') | LANG=C sed -re '/^$/d;1{/<-clear_very_many_lines>$/d}'
 }
 
 
 function parse_screen_list_dump_stage2 () {
   LANG=C sed -zrf <(echo '
     # Remove noise before and after clear_screen:
-    s!(\n|\v<erase>|\v<clear_right>|\v<jump_to_origin>|$\
+    s!(\n|\v<erase>|\v<clear_right>|\v<jump>|\v<jump_to_origin>|$\
       )*(\v<clear_screen>)(\v<clear_screen>|$\
       |\n|\v<erase>|\v<clear_right>|\v<jump_to_origin>)*!\n\2\n!g
-
-    # Detect list start:
-    s!^\v<clear_very_many_lines->\n?(\v<clear_screen>|$\
-      |)\n?\v<col_heads>!\v<start_list>!
-    s!\n\v</win>\n?(\v<clear_screen>|$\
-      |)\n?\v<col_heads>\n!\n\v<list_complete>\n!
-    ') | LANG=C sed -rf <(echo '
+    ') |
+  sed -re '/^\v<win /s~$~\v</win>~' |
+  sed -zre 's~(\v</win>)\n~\n\1~g;s~\n\v</win>(\v<win )~\n\1~g' |
+  LANG=C sed -zrf <(echo '
+    # Detect list start and end:
+    s!^\v<clear_very_many_lines->(\v<clear_[a-z]+>|\v<jump_to_origin>|$\
+      |\n)*\v<col_heads>!\v<start_list>!
+    s~(\v<wide_space>\S*)(\v<jump>)+(\v<col_heads>)~\1\n\v</win>\3~g
+    s!\n\v</win>(\n|\v<clear_screen>|\v<up>|$\
+      ){0,5}\n?\v<col_heads>\n!\n\v<list_complete>\n!
+  ') | LANG=C sed -rf <(echo '
     s~^[^\v]~unsupported\t&~
     /^\v<win /{
       s~\v<wide_space>+(\S*)$~\n\1~
@@ -201,7 +216,7 @@ function parse_screen_list_dump_stage2 () {
     s!^\v<maybe_repeat_list>\n\v<(start_list>)$!\v<re\1!
     /^\v<restart_list>$/q
     /^\v<list_complete>$/q
-    ')
+  ')
 }
 
 
